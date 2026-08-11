@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="設定 VibeSpace 使用空間的坪數、天花板材質與空調類型">
+  <title>空間設定｜VibeSpace</title>
+  <link rel="stylesheet" href="assets/css/settings.css">
+</head>
+<body>
+  <div class="glow glow-left" aria-hidden="true"></div>
+  <div class="glow glow-right" aria-hidden="true"></div>
+
+  <main class="page-shell">
+    <nav class="topbar" aria-label="主要導覽">
+      <a class="brand" href="index.html" aria-label="回到 VibeSpace 首頁">
+        <span class="brand-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>VibeSpace</span>
+      </a>
+      <span class="progress-label">SPACE CALIBRATION · 01</span>
+    </nav>
+
+    <header class="hero">
+      <p class="eyebrow">ACOUSTIC PROFILE</p>
+      <h1>讓聲音，適應你的空間。</h1>
+      <p class="lead">告訴我們空間條件，VibeSpace 會依據聲音反射與環境特性，建立更合適的混音參數。</p>
+    </header>
+
+    <form id="space-settings" class="settings-card">
+      <fieldset>
+        <legend><span>01</span> 空間坪數</legend>
+        <p class="field-help">選擇最接近的室內使用面積</p>
+        <div class="choices choices-three">
+          <label class="choice">
+            <input type="radio" name="spaceSize" value="small" required>
+            <span><b>小型空間</b><small>10 坪以下</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="spaceSize" value="medium">
+            <span><b>中型空間</b><small>10–30 坪</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="spaceSize" value="large">
+            <span><b>大型空間</b><small>30 坪以上</small></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span>02</span> 天花板材質</legend>
+        <p class="field-help">材質會影響聲音反射與殘響時間</p>
+        <div class="choices choices-three">
+          <label class="choice">
+            <input type="radio" name="ceilingMaterial" value="steel" required>
+            <span><b>輕鋼架</b><small>吸音板材</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="ceilingMaterial" value="concrete">
+            <span><b>水泥</b><small>硬質表面</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="ceilingMaterial" value="wood">
+            <span><b>木作</b><small>溫暖反射</small></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span>03</span> 空調類型</legend>
+        <p class="field-help">協助辨識環境底噪的來源</p>
+        <div class="choices choices-two">
+          <label class="choice">
+            <input type="radio" name="airConditioning" value="split" required>
+            <span><b>分離式</b><small>局部、間歇運轉</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="airConditioning" value="central">
+            <span><b>中央空調</b><small>持續、均勻送風</small></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <section class="profile" aria-live="polite">
+        <div class="profile-title"><span>預估聲學模式</span><strong id="profile-name">等待設定</strong></div>
+        <div class="profile-meter" aria-hidden="true"><i id="profile-meter-fill"></i></div>
+        <p id="profile-description">完成三項選擇後，我們會產生你的空間聲學輪廓。</p>
+      </section>
+
+      <button class="save-button" type="submit">儲存空間設定 <span aria-hidden="true">→</span></button>
+      <p id="save-status" class="save-status" role="status"></p>
+    </form>
+  </main>
+
+  <script src="assets/js/settings.js"></script>
+</body>
+</html>
