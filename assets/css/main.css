@@ -1,0 +1,400 @@
+:root {
+  --ink: #08090c;
+  --text-primary: rgba(240, 238, 234, 0.94);
+  --text-muted: rgba(240, 238, 234, 0.46);
+  --hairline: rgba(240, 238, 234, 0.1);
+  --glass: rgba(240, 238, 234, 0.035);
+  --accent: #d8c3a0;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--ink);
+  color: var(--text-primary);
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang TC",
+    "Noto Sans TC", "Helvetica Neue", sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ---------- 背景層 ---------- */
+
+.vibe-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  overflow: hidden;
+}
+
+.vibe-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  will-change: transform;
+  animation: drift 40s var(--ease) infinite;
+}
+
+.vibe-glow--a {
+  width: 70vmax;
+  height: 70vmax;
+  top: -28%;
+  left: -18%;
+  background: #2a3550;
+  opacity: 0.5;
+  animation-duration: 44s;
+}
+
+.vibe-glow--b {
+  width: 60vmax;
+  height: 60vmax;
+  bottom: -30%;
+  right: -14%;
+  background: #1e3a38;
+  opacity: 0.42;
+  animation-duration: 52s;
+  animation-delay: -14s;
+}
+
+.vibe-glow--c {
+  width: 44vmax;
+  height: 44vmax;
+  top: 26%;
+  right: 16%;
+  background: #4a3428;
+  opacity: 0.34;
+  animation-duration: 60s;
+  animation-delay: -30s;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) scale(1.14);
+  }
+}
+
+.vibe-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    transparent 30%,
+    rgba(4, 5, 7, 0.55) 78%,
+    rgba(4, 5, 7, 0.9) 100%
+  );
+}
+
+.vibe-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+  animation: grain 700ms steps(1) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, 1%); }
+  50% { transform: translate(1%, -2%); }
+  75% { transform: translate(-1%, -1%); }
+  100% { transform: translate(2%, 1%); }
+}
+
+/* ---------- 導覽列 ---------- */
+
+.vibe-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2.5rem;
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(8, 9, 12, 0.35);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.vibe-nav__brand {
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.vibe-nav__links a {
+  position: relative;
+  margin-left: 2rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  transition: color 0.5s var(--ease);
+}
+
+.vibe-nav__links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease);
+}
+
+.vibe-nav__links a:hover {
+  color: var(--text-primary);
+}
+
+.vibe-nav__links a:hover::after {
+  transform: scaleX(1);
+}
+
+/* ---------- 主區塊 ---------- */
+
+.vibe-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3.25rem;
+  text-align: center;
+  padding: 6rem 1.5rem 3rem;
+}
+
+.vibe-hero {
+  animation: rise 1.6s var(--ease) both;
+}
+
+.vibe-eyebrow {
+  margin: 0 0 1.1rem;
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.vibe-title {
+  margin: 0;
+  font-size: clamp(2.75rem, 8vw, 5rem);
+  font-weight: 200;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.vibe-tagline {
+  margin: 1.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.22em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* ---------- 主按鈕 ---------- */
+
+.vibe-orb {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px var(--hairline),
+    inset 0 1px 24px rgba(240, 238, 234, 0.05),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+  transition: box-shadow 0.7s var(--ease), background 0.7s var(--ease),
+    transform 0.7s var(--ease);
+  animation: rise 1.6s var(--ease) 0.18s both;
+}
+
+.vibe-orb:hover {
+  transform: translateY(-2px);
+  background: rgba(240, 238, 234, 0.06);
+}
+
+.vibe-orb:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 8px;
+}
+
+.vibe-orb__label {
+  font-size: 0.82rem;
+  font-weight: 300;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  transition: letter-spacing 0.7s var(--ease);
+}
+
+.vibe-orb__ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s var(--ease);
+}
+
+.vibe-orb__ring--inner {
+  inset: -14px;
+}
+
+.vibe-orb__ring--outer {
+  inset: -38px;
+}
+
+.vibe-orb[aria-pressed="true"] {
+  background: rgba(216, 195, 160, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(216, 195, 160, 0.22),
+    inset 0 1px 32px rgba(216, 195, 160, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.vibe-orb[aria-pressed="true"] .vibe-orb__label {
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+}
+
+.vibe-orb[aria-pressed="true"] .vibe-orb__ring--inner {
+  animation: breathe 5.5s var(--ease) infinite;
+}
+
+.vibe-orb[aria-pressed="true"] .vibe-orb__ring--outer {
+  animation: breathe 5.5s var(--ease) 0.9s infinite;
+}
+
+@keyframes breathe {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.34;
+  }
+  100% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+/* ---------- 音量視覺化 ---------- */
+
+.vibe-meter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  animation: rise 1.6s var(--ease) 0.32s both;
+}
+
+.vibe-meter__bar {
+  width: 2px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--text-primary);
+  opacity: 0.18;
+  transition: height 0.28s var(--ease), opacity 0.28s var(--ease);
+}
+
+.vibe-meter.is-active .vibe-meter__bar {
+  background: var(--accent);
+  opacity: 0.72;
+}
+
+/* ---------- 狀態文字 ---------- */
+
+.vibe-status {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  transition: color 0.7s var(--ease);
+  animation: rise 1.6s var(--ease) 0.44s both;
+}
+
+.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-status {
+  color: rgba(216, 195, 160, 0.72);
+}
+
+/* ---------- 響應式 ---------- */
+
+@media (max-width: 640px) {
+  .vibe-nav {
+    padding: 1.15rem 1.5rem;
+  }
+
+  .vibe-nav__links a {
+    margin-left: 1.25rem;
+    font-size: 0.7rem;
+  }
+
+  .vibe-panel {
+    gap: 2.5rem;
+  }
+
+  .vibe-orb {
+    width: 140px;
+    height: 140px;
+  }
+
+  .vibe-tagline {
+    font-size: 0.8rem;
+    letter-spacing: 0.16em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vibe-glow,
+  .vibe-grain,
+  .vibe-orb__ring,
+  .vibe-hero,
+  .vibe-orb,
+  .vibe-meter,
+  .vibe-status {
+    animation: none !important;
+  }
+}
