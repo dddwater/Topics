@@ -243,7 +243,6 @@
     line-height: 1.8;
   }
 
-  /* 手機端 RWD 響應式字體與排版優化 */
   @media (max-width: 640px) {
     .hero h1 {
       font-size: clamp(1.2rem, 5vw, 1.75rem);
@@ -304,14 +303,15 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    white-space: nowrap; /* 確保標題不掉字 */
+    white-space: nowrap;
   }
 
   .card-subtitle {
     font-size: 0.82rem;
     color: var(--text-muted);
     margin-top: 0.35rem;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
   }
 
   /* 表單控制 */
@@ -428,9 +428,12 @@
   .progress-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 0.75rem;
     color: var(--text-muted);
     margin-bottom: 0.5rem;
+    white-space: nowrap;
+    gap: 8px;
   }
 
   .progress-bar-bg {
@@ -447,7 +450,7 @@
     transition: width 0.4s var(--ease);
   }
 
-  /* 方案選擇卡片區塊 - 高級感置中對齊優化 */
+  /* 方案選擇卡片區塊 */
   .pricing-section {
     margin-top: 3.5rem;
     text-align: center;
@@ -505,13 +508,12 @@
     }
   }
 
-  /* 方案卡片優化：頂部置中 + 功能清單完美包覆對齊 */
   .price-card {
     background: var(--glass-card);
     border: 1px solid var(--hairline);
     border-radius: 18px;
     padding: 1.85rem 1.5rem;
-    text-align: center; /* 標題、描述、價格全部置中對齊 */
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -613,7 +615,6 @@
     color: var(--text-muted);
   }
 
-  /* 功能清單：置中包裹 + 文字打勾靠左齊平（高級 App 常用排版模式） */
   .feature-list-wrapper {
     width: 100%;
     display: flex;
@@ -668,7 +669,7 @@
     box-shadow: 0 12px 30px rgba(216, 195, 160, 0.2);
   }
 
-  /* 對比區塊：電腦版 Table / 手機版直向質感卡片 */
+  /* 對比區塊 */
   .accounting-section {
     margin-top: 3.5rem;
   }
@@ -706,7 +707,7 @@
   .tag-gain { color: var(--accent-emerald); }
   .tag-cost { color: #f87171; }
 
-  /* 手機專屬直向對比卡片（取代過窄難讀的表格） */
+  /* 手機專屬直向對比卡片 */
   .mobile-compare-list {
     display: none;
     gap: 1rem;
@@ -749,10 +750,10 @@
   /* 響應式切換：手機隱藏複雜 Table，顯示直向卡片 */
   @media (max-width: 640px) {
     .table-wrapper {
-      display: none; /* 隱藏手機端橫向擠壓的表格 */
+      display: none;
     }
     .mobile-compare-list {
-      display: flex; /* 顯示手機端極佳閱讀的直向對比卡片 */
+      display: flex;
     }
   }
 
@@ -920,7 +921,7 @@
       <div class="glass-card">
         <div class="card-header">
           <h2 class="card-title">🧮 企業生產力價值試算</h2>
-          <p class="card-subtitle">滑動調整參數，估算導入 VibeSpace 後的經濟效益</p>
+          <p class="card-subtitle">滑動調整參數，即時評估導入 VibeSpace 的經濟效益</p>
         </div>
 
         <!-- Input 1: Employee Count -->
@@ -954,8 +955,8 @@
             <span class="input-val-display" id="boostDisplay">5%</span>
           </div>
           <input type="range" id="boostSlider" class="slider" min="1" max="15" step="0.5" value="5">
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
-            💡 參考數據：職場聲學研究指出，適當動態遮蔽環境噪音可減少 15% 以上分心率，一般企業合理預估提升 3%~5% 專注產值。
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5;">
+            💡 參考數據：職場聲學研究指出，適當動態遮蔽環境噪音可減少 15% 分心率，一般企業合理預估提升 3%~5% 專注產值。
           </p>
         </div>
 
@@ -975,7 +976,7 @@
         <div>
           <div class="card-header">
             <h2 class="card-title">📈 財務預估效益報告</h2>
-            <p class="card-subtitle">公式：每月產值提升 = (員工人數 × 平均月薪) × 提升比例</p>
+            <p class="card-subtitle">依團隊人力規模與方案聲學覆蓋率即時計算</p>
           </div>
 
           <div class="results-grid">
@@ -999,7 +1000,7 @@
 
             <div class="metric-box">
               <div class="metric-label">投資報酬率 (ROI)</div>
-              <div class="metric-value" style="color: var(--accent);" id="outROI">+7173%</div>
+              <div class="metric-value" style="color: var(--accent);" id="outROI">+7,173%</div>
               <div class="metric-sub" id="outPaybackDays">開工第 1 天即回收當月成本</div>
             </div>
           </div>
@@ -1008,8 +1009,8 @@
         <!-- Visual Progress Ratio -->
         <div class="visualizer-card">
           <div class="progress-header">
-            <span>產值價值與系統費用對比</span>
-            <span id="progressText">產值價值 vs 系統月費</span>
+            <span>效益對比</span>
+            <span id="progressText">NT$ 72,000 vs NT$ 990</span>
           </div>
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -1140,7 +1141,7 @@
           </table>
         </div>
 
-        <!-- 手機版直向對比卡片 (零擠壓、超好讀) -->
+        <!-- 手機版直向對比卡片 -->
         <div class="mobile-compare-list">
           <div class="mobile-compare-card">
             <div class="m-card-title">
@@ -1410,10 +1411,10 @@
       }
 
       if (roiPercentage < 0) {
-        outROI.textContent = roiPercentage + '%';
+        outROI.textContent = roiPercentage.toLocaleString() + '%';
         outROI.classList.add('negative');
       } else {
-        outROI.textContent = '+' + roiPercentage + '%';
+        outROI.textContent = '+' + roiPercentage.toLocaleString() + '%';
         outROI.classList.remove('negative');
       }
 
@@ -1425,7 +1426,7 @@
       }
       ratio = Math.max(0, Math.min(100, ratio));
       progressBarFill.style.width = ratio + '%';
-      progressText.textContent = `產值價值 (NT$ ${monthlyGain.toLocaleString()}) vs 系統月費 (NT$ ${monthlyPlanCost.toLocaleString()})`;
+      progressText.textContent = `NT$ ${monthlyGain.toLocaleString()} vs NT$ ${monthlyPlanCost.toLocaleString()}`;
     }
 
     btnMonthly.addEventListener('click', () => {
