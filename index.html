@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VibeSpace Audio Engine Demo</title>
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section class="audio-panel" aria-labelledby="pageTitle">
+      <div class="panel-heading">
+        <p class="eyebrow">VibeSpace</p>
+        <h1 id="pageTitle">Audio Engine Demo</h1>
+        <p class="summary">Microphone input drives a quantized oscillator through the Web Audio API.</p>
+      </div>
+
+      <div class="controls" aria-label="Audio controls">
+        <button id="playBtn" type="button">Play Tone</button>
+        <button id="micBtn" type="button">Enable Mic</button>
+
+        <label class="slider-field">
+          <span>Volume</span>
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="0.6" />
+        </label>
+
+        <label class="slider-field">
+          <span>Update Rate</span>
+          <input id="interval" type="range" min="100" max="1000" step="50" value="400" />
+        </label>
+      </div>
+
+      <div class="meters" aria-live="polite">
+        <output id="intervalLabel">400 ms</output>
+        <output id="meter">RMS: --</output>
+        <output id="domFreq">Dominant: -- Hz</output>
+        <output id="quantFreq">Quantized: -- Hz</output>
+      </div>
+
+      <section class="chart-section" aria-labelledby="chartTitle">
+        <h2 id="chartTitle">Quantized Frequency History</h2>
+        <canvas id="freqChart" width="640" height="220"></canvas>
+      </section>
+    </section>
+  </main>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

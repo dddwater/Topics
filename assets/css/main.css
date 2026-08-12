@@ -1,0 +1,151 @@
+:root {
+  --bg: #10131a;
+  --panel: #f7f3ea;
+  --ink: #17202a;
+  --muted: #5f6770;
+  --accent: #1f8a70;
+  --accent-strong: #145f50;
+  --line: rgba(23, 32, 42, 0.16);
+  --meter: #20313f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(31, 138, 112, 0.24), transparent 28%),
+    linear-gradient(135deg, #10131a 0%, #202734 58%, #34424c 100%);
+}
+
+.app-shell {
+  width: min(980px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 32px 0;
+}
+
+.audio-panel {
+  width: 100%;
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+}
+
+.panel-heading {
+  max-width: 680px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: 2rem;
+}
+
+.summary {
+  margin-bottom: 24px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, max-content)) repeat(2, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: end;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 16px;
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-strong);
+}
+
+.slider-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.meters output {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: 6px;
+  color: #eaf4f1;
+  background: var(--meter);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-section h2 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  background: #10131a;
+}
+
+@media (max-width: 760px) {
+  .audio-panel {
+    padding: 20px;
+  }
+
+  .controls,
+  .meters {
+    grid-template-columns: 1fr;
+  }
+}
