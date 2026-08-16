@@ -90,17 +90,19 @@
   function updateProfile() {
     const settings = getSelections();
     const completed = Object.values(settings).filter(Boolean).length;
-    meterFill.style.width = `${(completed / 3) * 100}%`;
+    if (meterFill) {
+      meterFill.style.width = `${(completed / 3) * 100}%`;
+    }
 
     if (completed < 3) {
-      profileName.textContent = completed ? `${completed} / 3 已完成` : "等待設定";
-      profileDescription.textContent = "完成三項選擇後，我們會產生你的空間聲學輪廓。";
+      if (profileName) profileName.textContent = completed ? `${completed} / 3 已完成` : "等待設定";
+      if (profileDescription) profileDescription.textContent = "完成三項選擇後，我們會產生你的空間聲學輪廓。";
       return;
     }
 
     const profile = resolveProfile(settings);
-    profileName.textContent = profile.name;
-    profileDescription.textContent = `${environmentLabels[settings.environment]}・${spaceTypeLabels[settings.spaceType]}：${profile.description}`;
+    if (profileName) profileName.textContent = profile.name;
+    if (profileDescription) profileDescription.textContent = `${environmentLabels[settings.environment]}・${spaceTypeLabels[settings.spaceType]}：${profile.description}`;
   }
 
   function restoreSettings() {
@@ -119,7 +121,7 @@
   }
 
   form.addEventListener("change", () => {
-    saveStatus.textContent = "";
+    if (saveStatus) saveStatus.textContent = "";
     updateProfile();
   });
 
@@ -130,7 +132,7 @@
     const settings = buildSettings();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     window.dispatchEvent(new CustomEvent("vibespace:settings-saved", { detail: settings }));
-    saveStatus.textContent = `已儲存「${settings.acousticProfile.name}」，偵測頁面將優先使用這組設定。`;
+    if (saveStatus) saveStatus.textContent = `🎉 已儲存「${settings.acousticProfile.name}」，主播放頁面將優先套用此空間校正參數。`;
   });
 
   window.VibeSpaceSettings = {
