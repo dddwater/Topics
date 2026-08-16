@@ -6,6 +6,12 @@
   let microphoneStream = null;
   let animationFrameId = null;
   let onLevel = null;
+  let oscillator = null;
+  let gainNode = null;
+  let smoothedDominantFrequency = 0;
+  let lastOscillatorUpdate = 0;
+
+  const OSCILLATOR_UPDATE_INTERVAL = 400;
 
   function getDominantFrequency() {
     const frequencyData = new Uint8Array(analyser.frequencyBinCount);
@@ -64,6 +70,34 @@
     const dominantFrequency = getDominantFrequency();
     const quantizedFrequency = quantizeToPentatonicScale(dominantFrequency);
 
+    if (dominantFrequency > 0) {
+      smoothedDominantFrequency +=
+        (dominantFrequency - smoothedDominantFrequency) * 0.12;
+    }
+
+    const now = Date.now();
+    if (
+      oscillator &&
+      smoothedDominantFrequency > 0 &&
+      now - lastOscillatorUpdate >= OSCILLATOR_UPDATE_INTERVAL
+    ) {
+      const targetFrequency = Math.min(
+        Math.max(quantizeToPentatonicScale(smoothedDominantFrequency), 40),
+        5000
+      );
+      oscillator.frequency.setTargetAtTime(
+        targetFrequency,
+        audioContext.currentTime,
+        0.06
+      );
+      lastOscillatorUpdate = now;
+    }
+
+    if (gainNode) {
+      const targetGain = Math.min(0.08, Math.max(0.02, 0.08 - rms * 0.5));
+      gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.12);
+    }
+
     onLevel?.(Math.min(1, rms * 8), {
       rms,
       dominantFrequency,
@@ -88,6 +122,18 @@
     analyser.fftSize = 2048;
     microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
     microphoneSource.connect(analyser);
+
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 0.04;
+    gainNode.connect(audioContext.destination);
+    oscillator = audioContext.createOscillator();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 220;
+    oscillator.connect(gainNode);
+    oscillator.start();
+
+    smoothedDominantFrequency = 0;
+    lastOscillatorUpdate = 0;
     readMicrophone();
   }
 
@@ -98,6 +144,13 @@
     microphoneSource = null;
     microphoneStream?.getTracks().forEach((track) => track.stop());
     microphoneStream = null;
+    if (oscillator) {
+      oscillator.stop();
+      oscillator.disconnect();
+    }
+    oscillator = null;
+    gainNode?.disconnect();
+    gainNode = null;
     analyser = null;
     onLevel = null;
   }
