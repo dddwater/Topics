@@ -11,7 +11,44 @@
   let smoothedDominantFrequency = 0;
   let lastOscillatorUpdate = 0;
 
-  const OSCILLATOR_UPDATE_INTERVAL = 400;
+  const STORAGE_KEY = "vibespace.spaceSettings";
+  const DEFAULT_PROFILE = {
+    id: "automatic",
+    name: "自動偵測",
+    baseGain: 0.055,
+    maxGain: 0.08,
+    noiseSensitivity: 0.5,
+    updateInterval: 400
+  };
+  let activeProfile = DEFAULT_PROFILE;
+  let settingsSource = "automatic";
+
+  function loadSavedProfile() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const profile = saved?.acousticProfile;
+      const validManualSettings = saved?.version === 2
+        && saved?.source === "manual"
+        && profile?.name
+        && Number.isFinite(profile?.baseGain)
+        && Number.isFinite(profile?.maxGain)
+        && Number.isFinite(profile?.noiseSensitivity)
+        && Number.isFinite(profile?.updateInterval);
+
+      if (!validManualSettings) return null;
+      return profile;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function getConfiguration() {
+    const savedProfile = loadSavedProfile();
+    return {
+      source: savedProfile ? "manual" : "automatic",
+      profile: savedProfile || DEFAULT_PROFILE
+    };
+  }
 
   function getDominantFrequency() {
     const frequencyData = new Uint8Array(analyser.frequencyBinCount);
@@ -79,7 +116,7 @@
     if (
       oscillator &&
       smoothedDominantFrequency > 0 &&
-      now - lastOscillatorUpdate >= OSCILLATOR_UPDATE_INTERVAL
+      now - lastOscillatorUpdate >= activeProfile.updateInterval
     ) {
       const targetFrequency = Math.min(
         Math.max(quantizeToPentatonicScale(smoothedDominantFrequency), 40),
@@ -94,7 +131,10 @@
     }
 
     if (gainNode) {
-      const targetGain = Math.min(0.08, Math.max(0.02, 0.08 - rms * 0.5));
+      const targetGain = Math.min(
+        activeProfile.maxGain,
+        Math.max(0.015, activeProfile.baseGain - rms * activeProfile.noiseSensitivity)
+      );
       gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.12);
     }
 
@@ -114,6 +154,9 @@
     }
 
     onLevel = options.onLevel;
+    const configuration = getConfiguration();
+    activeProfile = configuration.profile;
+    settingsSource = configuration.source;
     audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
     if (audioContext.state === "suspended") await audioContext.resume();
 
@@ -124,7 +167,7 @@
     microphoneSource.connect(analyser);
 
     gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.04;
+    gainNode.gain.value = activeProfile.baseGain;
     gainNode.connect(audioContext.destination);
     oscillator = audioContext.createOscillator();
     oscillator.type = "sine";
@@ -135,6 +178,7 @@
     smoothedDominantFrequency = 0;
     lastOscillatorUpdate = 0;
     readMicrophone();
+    return { source: settingsSource, profileName: activeProfile.name };
   }
 
   function stop() {
@@ -155,7 +199,7 @@
     onLevel = null;
   }
 
-  window.VibeAudioEngine = { start, stop };
+  window.VibeAudioEngine = { start, stop, getConfiguration };
   window.addEventListener("pagehide", stop);
 })();
 
@@ -217,7 +261,10 @@
 
     try {
       if (window.VibeAudioEngine?.start) {
-        await window.VibeAudioEngine.start({ onLevel: render });
+        const engineState = await window.VibeAudioEngine.start({ onLevel: render });
+        status.textContent = engineState?.source === "manual"
+          ? `已套用「${engineState.profileName}」・聆聽環境中`
+          : "自動偵測中・聆聽環境音量";
       } else {
         startSimulation();
       }
@@ -249,5 +296,9 @@
     if (active) stop();
     else start();
   });
+  const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();
+  if (initialConfiguration?.source === "manual") {
+    status.textContent = `已準備「${initialConfiguration.profile.name}」手動設定`;
+  }
   reset();
 })();

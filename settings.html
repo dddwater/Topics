@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="設定 VibeSpace 使用空間的坪數、天花板材質與空調類型">
+  <meta name="description" content="用空間坪數、使用環境與開放程度，快速設定 VibeSpace 聲學模式">
   <title>空間設定｜VibeSpace</title>
   <link rel="stylesheet" href="assets/css/settings.css">
 </head>
@@ -23,7 +23,7 @@
     <header class="hero">
       <p class="eyebrow">ACOUSTIC PROFILE</p>
       <h1>讓聲音，適應你的空間。</h1>
-      <p class="lead">告訴我們空間條件，VibeSpace 會依據聲音反射與環境特性，建立更合適的混音參數。</p>
+      <p class="lead">不用了解天花板或空調規格，只要描述空間怎麼使用，我們就會建立合適的混音參數。</p>
     </header>
 
     <form id="space-settings" class="settings-card">
@@ -47,35 +47,43 @@
       </fieldset>
 
       <fieldset>
-        <legend><span>02</span> 天花板材質</legend>
-        <p class="field-help">材質會影響聲音反射與殘響時間</p>
-        <div class="choices choices-three">
+        <legend><span>02</span> 環境</legend>
+        <p class="field-help">選擇最接近平常使用情境的場所</p>
+        <div class="choices choices-four">
           <label class="choice">
-            <input type="radio" name="ceilingMaterial" value="steel" required>
-            <span><b>輕鋼架</b><small>吸音板材</small></span>
+            <input type="radio" name="environment" value="restaurant" required>
+            <span><b>餐廳</b><small>人聲、餐具聲較頻繁</small></span>
           </label>
           <label class="choice">
-            <input type="radio" name="ceilingMaterial" value="concrete">
-            <span><b>水泥</b><small>硬質表面</small></span>
+            <input type="radio" name="environment" value="office">
+            <span><b>辦公室</b><small>鍵盤、交談與設備聲</small></span>
           </label>
           <label class="choice">
-            <input type="radio" name="ceilingMaterial" value="wood">
-            <span><b>木作</b><small>溫暖反射</small></span>
+            <input type="radio" name="environment" value="cafe">
+            <span><b>咖啡廳</b><small>持續人聲與背景音樂</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="environment" value="classroom">
+            <span><b>教室／會議室</b><small>以語音清晰度為主</small></span>
           </label>
         </div>
       </fieldset>
 
       <fieldset>
-        <legend><span>03</span> 空調類型</legend>
-        <p class="field-help">協助辨識環境底噪的來源</p>
-        <div class="choices choices-two">
+        <legend><span>03</span> 空間類別</legend>
+        <p class="field-help">依照牆面、隔間與出入口的開放程度選擇</p>
+        <div class="choices choices-three">
           <label class="choice">
-            <input type="radio" name="airConditioning" value="split" required>
-            <span><b>分離式</b><small>局部、間歇運轉</small></span>
+            <input type="radio" name="spaceType" value="open" required>
+            <span><b>開放</b><small>沒有完整牆面或隔間</small></span>
           </label>
           <label class="choice">
-            <input type="radio" name="airConditioning" value="central">
-            <span><b>中央空調</b><small>持續、均勻送風</small></span>
+            <input type="radio" name="spaceType" value="semiOpen">
+            <span><b>半開放</b><small>有部分隔間或開放出入口</small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="spaceType" value="enclosed">
+            <span><b>封閉</b><small>完整牆面、門窗與獨立空間</small></span>
           </label>
         </div>
       </fieldset>
@@ -87,10 +95,11 @@
       </section>
 
       <button class="save-button" type="submit">儲存空間設定 <span aria-hidden="true">→</span></button>
+      <p class="save-note">儲存後，這組設定會優先套用到偵測頁面，取代原本的自動空間判斷。</p>
       <p id="save-status" class="save-status" role="status"></p>
     </form>
   </main>
 
-  <script src="assets/js/settings.js"></script>
+  <script src="assets/js/settings.js?v=simple-profile"></script>
 </body>
 </html>
