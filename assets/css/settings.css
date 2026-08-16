@@ -61,6 +61,7 @@ legend span { margin-right: 12px; color: var(--cyan); font-family: monospace; fo
 .field-help { margin: 9px 0 20px 32px; color: var(--muted); font-size: 13px; }
 .choices { display: grid; gap: 12px; }
 .choices-three { grid-template-columns: repeat(3, 1fr); }
+.choices-four { grid-template-columns: repeat(2, 1fr); }
 .choices-two { grid-template-columns: repeat(2, 1fr); }
 .choice { position: relative; cursor: pointer; }
 .choice input { position: absolute; opacity: 0; pointer-events: none; }
@@ -81,6 +82,7 @@ legend span { margin-right: 12px; color: var(--cyan); font-family: monospace; fo
 .profile-meter i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--mint)); box-shadow: 0 0 10px var(--cyan); transition: width 0.4s ease; }
 .save-button { display: flex; width: 100%; justify-content: center; gap: 14px; padding: 18px 22px; border: 0; border-radius: 14px; color: #001014; background: linear-gradient(100deg, var(--cyan), var(--mint)); font-size: 16px; font-weight: 850; cursor: pointer; transition: 0.2s ease; }
 .save-button:hover { transform: translateY(-2px); box-shadow: 0 14px 35px rgba(54, 225, 246, 0.2); }
+.save-note { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.6; }
 .save-status { min-height: 20px; margin: 14px 0 0; color: #77f4ce; text-align: center; font-size: 13px; }
 
 @keyframes drift { to { transform: translate(5rem, -3rem) scale(1.15); } }
@@ -88,7 +90,7 @@ legend span { margin-right: 12px; color: var(--cyan); font-family: monospace; fo
 @media (max-width: 680px) {
   .topbar { margin-bottom: 55px; }
   .progress-label { display: none; }
-  .choices-three, .choices-two { grid-template-columns: 1fr; }
+  .choices-three, .choices-four, .choices-two { grid-template-columns: 1fr; }
   .choice > span { min-height: 76px; }
   .field-help { margin-left: 0; }
   .settings-card { border-radius: 20px; }
