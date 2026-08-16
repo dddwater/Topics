@@ -1,30 +1,21 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VibeSpace | 企業訂閱方案與 ROI 產值試算器</title>
-  <meta name="description" content="VibeSpace 智慧環境音效 Web App - 企業產值提升試算與方案訂閱頁面">
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeSpace</title>
   <style>
-  /* VibeSpace Mobile-Perfect Stylesheet */
   :root {
-    --bg-dark: #0b0d17;
-    --bg-card: rgba(22, 27, 46, 0.85);
-    --border-glow: rgba(110, 86, 207, 0.35);
-    --border-glow-accent: rgba(56, 189, 248, 0.5);
-    --primary-purple: #7c3aed;
-    --primary-indigo: #6366f1;
+    --ink: #08090c;
+    --text-primary: rgba(240, 238, 234, 0.94);
+    --text-muted: rgba(240, 238, 234, 0.46);
+    --hairline: rgba(240, 238, 234, 0.1);
+    --glass: rgba(240, 238, 234, 0.035);
+    --glass-card: rgba(18, 20, 28, 0.75);
+    --accent: #d8c3a0;
+    --accent-emerald: #34d399;
     --accent-cyan: #38bdf8;
-    --accent-emerald: #10b981;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 
   * {
@@ -33,167 +24,250 @@
     padding: 0;
   }
 
-  body {
-    background-color: var(--bg-dark);
-    background-image: 
-      radial-gradient(circle at 15% 15%, rgba(124, 58, 237, 0.15) 0%, transparent 40%),
-      radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.12) 0%, transparent 40%),
-      radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
-    background-attachment: fixed;
-    color: var(--text-main);
-    font-family: var(--font-family);
-    min-height: 100vh;
-    line-height: 1.5;
-    overflow-x: hidden; /* Prevents horizontal body scroll */
+  html {
+    scrollbar-gutter: stable;
   }
 
-  /* Centered Main Container */
+  body {
+    background: var(--ink);
+    color: var(--text-primary);
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang TC",
+      "Noto Sans TC", "Helvetica Neue", sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ---------- 背景層 ---------- */
+
+  .vibe-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    overflow: hidden;
+  }
+
+  .vibe-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(110px);
+    will-change: transform;
+    animation: drift 40s var(--ease) infinite;
+  }
+
+  .vibe-glow--a {
+    width: 70vmax;
+    height: 70vmax;
+    top: -28%;
+    left: -18%;
+    background: #2a3550;
+    opacity: 0.5;
+    animation-duration: 44s;
+  }
+
+  .vibe-glow--b {
+    width: 60vmax;
+    height: 60vmax;
+    bottom: -30%;
+    right: -14%;
+    background: #1e3a38;
+    opacity: 0.42;
+    animation-duration: 52s;
+    animation-delay: -14s;
+  }
+
+  .vibe-glow--c {
+    width: 44vmax;
+    height: 44vmax;
+    top: 26%;
+    right: 16%;
+    background: #4a3428;
+    opacity: 0.34;
+    animation-duration: 60s;
+    animation-delay: -30s;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(4%, 6%, 0) scale(1.14); }
+  }
+
+  .vibe-vignette {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 50% 45%,
+      transparent 30%,
+      rgba(4, 5, 7, 0.55) 78%,
+      rgba(4, 5, 7, 0.9) 100%
+    );
+  }
+
+  .vibe-grain {
+    position: fixed;
+    inset: -50%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+    animation: grain 700ms steps(1) infinite;
+  }
+
+  @keyframes grain {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-2%, 1%); }
+    50% { transform: translate(1%, -2%); }
+    75% { transform: translate(-1%, -1%); }
+    100% { transform: translate(2%, 1%); }
+  }
+
+  /* ---------- 導覽列 ---------- */
+
+  .vibe-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2.5rem;
+    border-bottom: 1px solid var(--hairline);
+    background: rgba(8, 9, 12, 0.35);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+  }
+
+  .vibe-nav__brand {
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .vibe-nav__links {
+    display: flex;
+  }
+
+  .vibe-nav__links a {
+    position: relative;
+    margin-left: 2rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.5s var(--ease);
+  }
+
+  .vibe-nav__links a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 100%;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s var(--ease);
+  }
+
+  .vibe-nav__links a:hover,
+  .vibe-nav__links a.active {
+    color: var(--text-primary);
+  }
+
+  .vibe-nav__links a:hover::after,
+  .vibe-nav__links a.active::after {
+    transform: scaleX(1);
+  }
+
+  @media (max-width: 640px) {
+    .vibe-nav {
+      padding: 1.15rem 1.5rem;
+    }
+    .vibe-nav__links a {
+      margin-left: 1.25rem;
+      font-size: 0.7rem;
+    }
+  }
+
+  /* ---------- 容器與內容 ---------- */
+
   .container {
     width: 100%;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 6rem 1.25rem 3rem;
   }
 
-  /* Navigation Bar - Clean & Mobile Friendly */
-  .navbar {
-    width: 100%;
-    border-bottom: 1px solid var(--glass-border);
-    backdrop-filter: blur(16px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(11, 13, 23, 0.9);
-    padding: 12px 0;
-  }
-
-  .nav-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    gap: 12px;
-  }
-
-  .logo-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    flex-shrink: 0;
-  }
-
-  .logo-icon {
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, var(--primary-purple), var(--accent-cyan));
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 800;
-    font-size: 1.1rem;
-    box-shadow: 0 0 12px rgba(124, 58, 237, 0.4);
-  }
-
-  .logo-text {
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.5px;
-  }
-
-  .nav-links {
-    display: flex;
-    gap: 6px;
-    list-style: none;
-    flex-wrap: nowrap;
-  }
-
-  .nav-item {
-    padding: 6px 12px;
-    color: var(--text-muted);
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.88rem;
-    white-space: nowrap; /* Strictly prevents text from wrapping to second line */
-    transition: all 0.2s ease;
-  }
-
-  .nav-item:hover {
-    color: var(--text-main);
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .nav-item.active {
-    color: #ffffff;
-    background: rgba(124, 58, 237, 0.3);
-    border: 1px solid rgba(124, 58, 237, 0.5);
-  }
-
-  /* Mobile Navbar Layout Adjustment */
-  @media (max-width: 600px) {
-    .nav-inner {
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .nav-links {
-      justify-content: center;
-      width: 100%;
-    }
-
-    .nav-item {
-      padding: 6px 10px;
-      font-size: 0.82rem;
-    }
-  }
-
-  /* Hero Section */
   .hero {
     text-align: center;
-    padding: 32px 0 20px;
+    padding: 2rem 0 1.5rem;
   }
 
-  .pill-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 5px 14px;
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    border-radius: 20px;
-    color: var(--accent-cyan);
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 12px;
+  .eyebrow {
+    margin: 0 0 1.1rem;
+    color: var(--accent);
+    font-size: 0.66rem;
+    font-weight: 400;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    opacity: 0.75;
   }
 
   .hero h1 {
-    font-size: clamp(1.8rem, 5vw, 2.4rem);
-    font-weight: 800;
+    margin: 0;
+    font-size: clamp(1.3rem, 5.2vw, 3.5rem);
+    font-weight: 200;
+    letter-spacing: 0.06em;
     line-height: 1.25;
-    margin-bottom: 10px;
-    background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.75rem;
   }
 
   .hero p {
-    font-size: 0.95rem;
+    margin: 1rem auto 0;
     color: var(--text-muted);
-    max-width: 600px;
-    margin: 0 auto;
+    font-size: 0.9rem;
+    letter-spacing: 0.18em;
+    max-width: 720px;
+    text-align: center;
+    line-height: 1.8;
   }
 
-  /* Main Grid Section */
+  @media (max-width: 640px) {
+    .hero h1 {
+      font-size: clamp(1.2rem, 5vw, 1.75rem);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .hero p {
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      word-break: keep-all;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .hero h1 {
+      font-size: 1.15rem;
+    }
+  }
+
   .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-top: 24px;
+    gap: 1.5rem;
+    margin-top: 2rem;
     width: 100%;
   }
 
@@ -203,127 +277,135 @@
     }
   }
 
-  /* Glass Card Base */
+  /* 毛玻璃卡片 */
   .glass-card {
-    background: var(--bg-card);
-    border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    padding: 24px 20px;
-    backdrop-filter: blur(16px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    margin: 0 auto;
+    background: var(--glass-card);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 1.75rem 1.5rem;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: inset 0 1px 24px rgba(240, 238, 234, 0.03),
+      0 20px 50px rgba(0, 0, 0, 0.5);
   }
 
   .card-header {
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
     text-align: center;
   }
 
   .card-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: white;
+    font-size: clamp(1.05rem, 4.5vw, 1.25rem);
+    font-weight: 300;
+    letter-spacing: 0.14em;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 0.5rem;
+    white-space: nowrap;
   }
 
   .card-subtitle {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 0.35rem;
+    letter-spacing: 0.06em;
+    line-height: 1.5;
   }
 
-  /* Form & Sliders */
+  /* 表單控制 */
   .input-group {
-    margin-bottom: 18px;
+    margin-bottom: 1.25rem;
   }
 
   .input-label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.88rem;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #e2e8f0;
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
   }
 
   .input-val-display {
-    color: var(--accent-cyan);
-    font-size: 0.98rem;
-    font-weight: 700;
+    color: var(--accent);
+    font-size: 0.95rem;
+    font-weight: 400;
   }
 
   .slider {
     width: 100%;
-    height: 8px;
-    border-radius: 4px;
-    background: #1e293b;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(240, 238, 234, 0.12);
     outline: none;
-    accent-color: var(--accent-cyan);
+    accent-color: var(--accent);
     cursor: pointer;
   }
 
   .number-input {
     width: 100%;
-    padding: 8px 12px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid var(--glass-border);
+    padding: 0.6rem 0.85rem;
+    background: rgba(8, 9, 12, 0.6);
+    border: 1px solid var(--hairline);
     border-radius: 8px;
-    color: white;
-    font-size: 0.92rem;
-    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.88rem;
     outline: none;
   }
 
-  /* Metric Cards Grid */
+  .number-input:focus {
+    border-color: var(--accent);
+  }
+
+  /* 數據面板 */
   .results-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
   }
 
   @media (max-width: 480px) {
     .results-grid {
-      grid-template-columns: 1fr; /* Stack on super small screens */
+      grid-template-columns: 1fr;
     }
   }
 
   .metric-box {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(8, 9, 12, 0.5);
+    border: 1px solid var(--hairline);
     border-radius: 12px;
-    padding: 14px;
+    padding: 1rem;
     text-align: center;
   }
 
   .metric-box.highlight {
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(16, 185, 129, 0.15));
-    border: 1px solid rgba(124, 58, 237, 0.4);
+    background: rgba(216, 195, 160, 0.06);
+    border: 1px solid rgba(216, 195, 160, 0.25);
   }
 
   .metric-label {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    font-weight: 600;
+    letter-spacing: 0.08em;
   }
 
   .metric-value {
-    font-size: clamp(1.05rem, 2vw, 1.3rem);
-    font-weight: 800;
-    margin-top: 4px;
-    color: #ffffff;
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    margin-top: 0.35rem;
+    color: var(--text-primary);
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
   }
 
   .metric-box.highlight .metric-value {
-    color: #34d399;
+    color: var(--accent-emerald);
   }
 
   .metric-value.negative {
@@ -331,89 +413,93 @@
   }
 
   .metric-sub {
-    font-size: 0.75rem;
-    color: #a1a1aa;
-    margin-top: 2px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
   }
 
-  /* Progress Bar */
   .visualizer-card {
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(8, 9, 12, 0.4);
     border-radius: 12px;
-    padding: 12px 14px;
-    border: 1px solid var(--glass-border);
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--hairline);
   }
 
   .progress-header {
     display: flex;
     justify-content: space-between;
-    font-size: 0.78rem;
+    align-items: center;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    margin-bottom: 6px;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    gap: 8px;
   }
 
   .progress-bar-bg {
-    height: 10px;
-    background: #1e293b;
-    border-radius: 5px;
+    height: 8px;
+    background: rgba(240, 238, 234, 0.1);
+    border-radius: 4px;
     overflow: hidden;
   }
 
   .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary-purple), var(--accent-cyan));
+    background: linear-gradient(90deg, var(--accent), var(--accent-cyan));
     width: 50%;
-    transition: width 0.4s ease;
+    transition: width 0.4s var(--ease);
   }
 
-  /* Pricing Section */
+  /* 方案選擇卡片區塊 */
   .pricing-section {
-    margin-top: 48px;
+    margin-top: 3.5rem;
     text-align: center;
   }
 
   .pricing-toggle {
     display: inline-flex;
     align-items: center;
-    background: rgba(22, 27, 46, 0.9);
+    background: rgba(8, 9, 12, 0.6);
     padding: 4px;
     border-radius: 30px;
-    border: 1px solid var(--glass-border);
-    margin-top: 16px;
+    border: 1px solid var(--hairline);
+    margin-top: 1.25rem;
   }
 
   .toggle-btn {
-    padding: 6px 16px;
+    padding: 0.45rem 1.25rem;
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
     border-radius: 20px;
     cursor: pointer;
+    transition: all 0.3s var(--ease);
   }
 
   .toggle-btn.active {
-    background: var(--primary-purple);
-    color: white;
+    background: rgba(216, 195, 160, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(216, 195, 160, 0.3);
   }
 
   .discount-badge {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    font-size: 0.72rem;
+    background: rgba(52, 211, 153, 0.15);
+    color: var(--accent-emerald);
+    font-size: 0.7rem;
     padding: 2px 6px;
     border-radius: 8px;
     margin-left: 4px;
   }
 
-  /* Pricing Cards Grid */
   .pricing-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 24px;
+    gap: 1.25rem;
+    margin-top: 2.5rem;
     width: 100%;
+    align-items: stretch;
   }
 
   @media (max-width: 820px) {
@@ -423,21 +509,53 @@
   }
 
   .price-card {
-    background: var(--bg-card);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    padding: 24px 18px;
-    text-align: left;
+    background: var(--glass-card);
+    border: 1px solid var(--hairline);
+    border-radius: 18px;
+    padding: 1.85rem 1.5rem;
+    text-align: center;
     display: flex;
     flex-direction: column;
+    align-items: center;
     position: relative;
-    width: 100%;
+    backdrop-filter: blur(24px);
+    cursor: pointer;
+    transition: all 0.35s var(--ease);
   }
 
-  .price-card.popular {
-    background: linear-gradient(180deg, rgba(30, 27, 75, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 2px solid var(--primary-purple);
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
+  .price-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(216, 195, 160, 0.4);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .price-card.selected {
+    border: 2px solid var(--accent);
+    background: rgba(216, 195, 160, 0.08);
+    box-shadow: inset 0 0 20px rgba(216, 195, 160, 0.08),
+      0 16px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .selected-check {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease);
+  }
+
+  .price-card.selected .selected-check {
+    opacity: 1;
   }
 
   .popular-badge {
@@ -445,174 +563,356 @@
     top: -11px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(90deg, var(--primary-purple), var(--accent-cyan));
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 800;
-    padding: 2px 12px;
+    background: var(--accent);
+    color: var(--ink);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 10px;
     border-radius: 12px;
+    letter-spacing: 0.14em;
+    pointer-events: none;
+    z-index: 2;
   }
 
   .plan-name {
     font-size: 1.15rem;
-    font-weight: 700;
-    color: white;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--text-primary);
+    text-align: center;
   }
 
   .plan-desc {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
-    margin-top: 4px;
+    margin-top: 0.35rem;
+    text-align: center;
+    line-height: 1.5;
   }
 
   .plan-price {
-    margin: 16px 0;
+    margin: 1.25rem 0;
     display: flex;
     align-items: baseline;
+    justify-content: center;
     gap: 4px;
   }
 
   .price-currency {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 0.95rem;
     color: var(--text-muted);
   }
 
   .price-num {
-    font-size: 2rem;
-    font-weight: 800;
-    color: white;
+    font-size: 1.9rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    color: var(--text-primary);
   }
 
   .price-unit {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
+  }
+
+  .feature-list-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-grow: 1;
+    margin-bottom: 0.5rem;
   }
 
   .feature-list {
     list-style: none;
-    margin-bottom: 20px;
-    flex-grow: 1;
+    text-align: left;
+    display: inline-block;
   }
 
   .feature-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 0.85rem;
-    color: #cbd5e1;
-    margin-bottom: 8px;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    margin-bottom: 0.6rem;
+    opacity: 0.88;
   }
 
   .feature-icon {
-    color: var(--accent-emerald);
-    font-weight: bold;
+    color: var(--accent);
+    flex-shrink: 0;
   }
 
-  .btn-cta {
-    width: 100%;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 0.88rem;
+  .single-sub-wrapper {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn-single-subscribe {
+    padding: 0.85rem 3rem;
+    border-radius: 30px;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
     cursor: pointer;
-    border: none;
-    text-align: center;
+    background: rgba(216, 195, 160, 0.18);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    transition: all 0.3s var(--ease);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 
-  .btn-secondary {
-    background: rgba(255, 255, 255, 0.08);
-    color: white;
-    border: 1px solid var(--glass-border);
+  .btn-single-subscribe:hover {
+    background: rgba(216, 195, 160, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(216, 195, 160, 0.2);
   }
 
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary-purple), var(--primary-indigo));
-    color: white;
-  }
-
-  /* Comparison Section */
+  /* 對比區塊 */
   .accounting-section {
-    margin-top: 48px;
+    margin-top: 3.5rem;
   }
 
+  /* 電腦版表格 */
   .table-wrapper {
     overflow-x: auto;
-    margin-top: 16px;
+    margin-top: 1.25rem;
     border-radius: 12px;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--hairline);
   }
 
   .custom-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    min-width: 500px; /* Allow smooth horizontal scroll on mobile */
+    min-width: 500px;
   }
 
   .custom-table th {
-    background: rgba(15, 23, 42, 0.95);
-    padding: 12px 14px;
+    background: rgba(8, 9, 12, 0.8);
+    padding: 0.85rem 1rem;
     color: var(--text-muted);
-    font-size: 0.8rem;
-    font-weight: 700;
-    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--hairline);
   }
 
   .custom-table td {
-    padding: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-    font-size: 0.85rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--hairline);
+    font-size: 0.84rem;
   }
 
-  .tag-gain {
-    color: #34d399;
-    font-weight: 600;
+  .tag-gain { color: var(--accent-emerald); }
+  .tag-cost { color: #f87171; }
+
+  /* 手機專屬直向對比卡片 */
+  .mobile-compare-list {
+    display: none;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    flex-direction: column;
   }
 
-  .tag-cost {
-    color: #f87171;
-    font-weight: 600;
+  .mobile-compare-card {
+    background: rgba(8, 9, 12, 0.5);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 1.1rem;
+    text-align: left;
   }
 
-  /* Footer */
-  footer {
-    margin-top: 60px;
-    padding: 24px 0;
-    border-top: 1px solid var(--glass-border);
+  .m-card-title {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    font-weight: 400;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.65rem;
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 0.5rem;
+  }
+
+  .m-compare-row {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .m-compare-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  /* 響應式切換：手機隱藏複雜 Table，顯示直向卡片 */
+  @media (max-width: 640px) {
+    .table-wrapper {
+      display: none;
+    }
+    .mobile-compare-list {
+      display: flex;
+    }
+  }
+
+  /* 訂閱 Modal 彈窗 */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(4, 5, 7, 0.8);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s var(--ease);
+  }
+
+  .modal-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-card {
+    background: var(--ink);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 440px;
+    width: 100%;
     text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-summary {
+    background: rgba(240, 238, 234, 0.04);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1.25rem 0;
+    text-align: left;
+  }
+
+  .modal-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-row strong {
+    color: var(--accent);
+  }
+
+  .pay-methods {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 1.25rem 0;
+  }
+
+  .pay-btn {
+    padding: 8px 14px;
+    background: rgba(240, 238, 234, 0.06);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+  }
+
+  .pay-btn:hover,
+  .pay-btn.selected {
+    background: rgba(216, 195, 160, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(216, 195, 160, 0.2);
+  }
+
+  .btn-modal-confirm {
+    width: 100%;
+    padding: 0.85rem;
+    border-radius: 12px;
+    background: var(--accent);
+    color: var(--ink);
+    font-weight: bold;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+  }
+
+  .btn-modal-confirm:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .btn-modal-cancel {
+    display: inline-block;
+    width: 100%;
+    padding: 0.65rem;
+    border-radius: 10px;
+    background: rgba(240, 238, 234, 0.05);
+    border: 1px solid var(--hairline);
     color: var(--text-muted);
     font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    margin-top: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s var(--ease);
+  }
+
+  .btn-modal-cancel:hover {
+    background: rgba(240, 238, 234, 0.12);
+    color: var(--text-primary);
+    border-color: rgba(240, 238, 234, 0.25);
   }
   </style>
 </head>
 <body>
 
-  <!-- Navigation Bar -->
-  <header class="navbar">
-    <div class="container">
-      <div class="nav-inner">
-        <a href="index.html" class="logo-group">
-          <div class="logo-icon">V</div>
-          <span class="logo-text">VibeSpace</span>
-        </a>
-        <nav>
-          <ul class="nav-links">
-            <li><a href="index.html" class="nav-item">主播放頁</a></li>
-            <li><a href="settings.html" class="nav-item">空間設定</a></li>
-            <li><a href="pricing.html" class="nav-item active">ROI 定價</a></li>
-          </ul>
-        </nav>
-      </div>
-    </div>
+  <!-- 動態背景層 -->
+  <div class="vibe-bg">
+    <div class="vibe-glow vibe-glow--a"></div>
+    <div class="vibe-glow vibe-glow--b"></div>
+    <div class="vibe-glow vibe-glow--c"></div>
+  </div>
+  <div class="vibe-vignette"></div>
+  <div class="vibe-grain"></div>
+
+  <!-- 導覽列 -->
+  <header class="vibe-nav">
+    <a href="index.html" class="vibe-nav__brand">VibeSpace</a>
+    <nav class="vibe-nav__links">
+      <a href="settings.html">空間設定</a>
+      <a href="pricing.html" class="active">方案與定價</a>
+    </nav>
   </header>
 
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <div class="pill-tag">✨ 企業訂閱與 ROI 產值試算器</div>
-      <h1>智慧聲學投資 · 效益與 ROI 試算器</h1>
-      <p>專為企業與商業場域打造。調整團隊規模與平均薪資，即時量化 VibeSpace 智慧環境音效系統為企業帶來的專注力提升與經濟價值。</p>
+      <p class="eyebrow">ACOUSTIC VALUE & ROI</p>
+      <h1>量化專注・看見聲音的價值</h1>
+      <p>
+        專為企業與商業場域打造<br />
+        即時量化 VibeSpace 智慧環境音效系統帶來的經濟效益
+      </p>
     </section>
 
     <!-- Main Grid: ROI Calculator + Metrics -->
@@ -621,7 +921,7 @@
       <div class="glass-card">
         <div class="card-header">
           <h2 class="card-title">🧮 企業生產力價值試算</h2>
-          <p class="card-subtitle">滑動調整參數，估算導入 VibeSpace 後的經濟效益</p>
+          <p class="card-subtitle">滑動調整參數，即時評估導入 VibeSpace 的經濟效益</p>
         </div>
 
         <!-- Input 1: Employee Count -->
@@ -655,8 +955,8 @@
             <span class="input-val-display" id="boostDisplay">5%</span>
           </div>
           <input type="range" id="boostSlider" class="slider" min="1" max="15" step="0.5" value="5">
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">
-            💡 參考數據：職場聲學研究指出，適當動態遮蔽環境噪音可減少 15% 以上分心率，一般企業合理預估提升 3%~5% 專注產值。
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5;">
+            💡 參考數據：職場聲學研究指出，適當動態遮蔽環境噪音可減少 15% 分心率，一般企業合理預估提升 3%~5% 專注產值。
           </p>
         </div>
 
@@ -676,7 +976,7 @@
         <div>
           <div class="card-header">
             <h2 class="card-title">📈 財務預估效益報告</h2>
-            <p class="card-subtitle">公式：每月產值提升 = (員工人數 × 平均月薪) × 提升比例</p>
+            <p class="card-subtitle">依團隊人力規模與方案聲學覆蓋率即時計算</p>
           </div>
 
           <div class="results-grid">
@@ -700,7 +1000,7 @@
 
             <div class="metric-box">
               <div class="metric-label">投資報酬率 (ROI)</div>
-              <div class="metric-value" style="color: var(--accent-cyan);" id="outROI">+7173%</div>
+              <div class="metric-value" style="color: var(--accent);" id="outROI">+7,173%</div>
               <div class="metric-sub" id="outPaybackDays">開工第 1 天即回收當月成本</div>
             </div>
           </div>
@@ -709,8 +1009,8 @@
         <!-- Visual Progress Ratio -->
         <div class="visualizer-card">
           <div class="progress-header">
-            <span>產值價值與系統費用對比</span>
-            <span id="progressText">產值價值 vs 系統月費</span>
+            <span>效益對比</span>
+            <span id="progressText">NT$ 72,000 vs NT$ 990</span>
           </div>
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progressBarFill"></div>
@@ -721,8 +1021,8 @@
 
     <!-- Subscription Plans Section -->
     <section class="pricing-section">
-      <h2 style="font-size: 1.8rem; font-weight: 800; color: white;">訂閱方案與功能定價</h2>
-      <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.9rem;">全方案皆包含 14 天免費體驗與基礎 Web Audio 即時聲學引擎</p>
+      <h2 style="font-size: 1.8rem; font-weight: 200; letter-spacing: 0.08em; color: var(--text-primary);">訂閱方案與功能定價</h2>
+      <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.86rem;">全方案皆包含首月免費體驗與基礎 Web Audio 即時聲學引擎</p>
 
       <!-- Toggle Monthly / Yearly -->
       <div class="pricing-toggle">
@@ -733,7 +1033,8 @@
       <!-- Pricing Cards Grid -->
       <div class="pricing-cards">
         <!-- Starter Plan -->
-        <div class="price-card">
+        <div class="price-card" data-plan-key="starter">
+          <div class="selected-check">✓</div>
           <div class="plan-name">Starter 基礎版</div>
           <div class="plan-desc">適合個人工作室、SOHO 族或 5 人以下微型團隊</div>
           <div class="plan-price">
@@ -741,18 +1042,20 @@
             <span class="price-num" data-plan="starter">299</span>
             <span class="price-unit">/ 月</span>
           </div>
-          <ul class="feature-list">
-            <li class="feature-item"><span class="feature-icon">✓</span> 基礎環境麥克風音量偵測</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 3 種預設環境聲學氛圍音效</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 支援單一裝置瀏覽器播放</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 基礎線上支援</li>
-          </ul>
-          <button class="btn-cta btn-secondary">開始免費試用</button>
+          <div class="feature-list-wrapper">
+            <ul class="feature-list">
+              <li class="feature-item"><span class="feature-icon">✓</span> 基礎環境麥克風音量偵測</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 3 種預設環境聲學氛圍音效</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 支援單一裝置瀏覽器播放</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 基礎線上支援</li>
+            </ul>
+          </div>
         </div>
 
-        <!-- Pro Plan (Popular) -->
-        <div class="price-card popular">
-          <div class="popular-badge">最受歡迎推薦</div>
+        <!-- Pro Plan (Selected by default) -->
+        <div class="price-card selected" data-plan-key="pro">
+          <div class="selected-check">✓</div>
+          <div class="popular-badge">推薦</div>
           <div class="plan-name">Business Pro 商業版</div>
           <div class="plan-desc">適合開放式辦公室、共同工作空間與咖啡廳</div>
           <div class="plan-price">
@@ -760,17 +1063,19 @@
             <span class="price-num" data-plan="pro">990</span>
             <span class="price-unit">/ 月</span>
           </div>
-          <ul class="feature-list">
-            <li class="feature-item"><span class="feature-icon">✓</span> 包含 Starter 全部功能</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> Web Audio API 無縫 Crossfade 混音</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 空間參數設定 (坪數 / 天花板 / 空調)</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> ROI 試算與生產力預估報表功能</li>
-          </ul>
-          <button class="btn-cta btn-primary">選擇商業版</button>
+          <div class="feature-list-wrapper">
+            <ul class="feature-list">
+              <li class="feature-item"><span class="feature-icon">✓</span> 包含 Starter 全部功能</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> Web Audio API 無縫 Crossfade 混音</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 空間參數設定 (坪數 / 天花板 / 空調)</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> ROI 試算與生產力預估報表功能</li>
+            </ul>
+          </div>
         </div>
 
         <!-- Enterprise Plan -->
-        <div class="price-card">
+        <div class="price-card" data-plan-key="enterprise">
+          <div class="selected-check">✓</div>
           <div class="plan-name">Enterprise 旗艦版</div>
           <div class="plan-desc">適合連鎖總部、多場域商業空間與企業客戶</div>
           <div class="plan-price">
@@ -778,14 +1083,20 @@
             <span class="price-num" data-plan="enterprise">2,990</span>
             <span class="price-unit">/ 月</span>
           </div>
-          <ul class="feature-list">
-            <li class="feature-item"><span class="feature-icon">✓</span> 包含 Business Pro 全部功能</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 多區域 (Multi-Zone) 音效分區同步</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> FastAPI 後端 API 串接支援</li>
-            <li class="feature-item"><span class="feature-icon">✓</span> 專屬聲學工程師顧問諮詢</li>
-          </ul>
-          <button class="btn-cta btn-secondary">聯繫團隊諮詢</button>
+          <div class="feature-list-wrapper">
+            <ul class="feature-list">
+              <li class="feature-item"><span class="feature-icon">✓</span> 包含 Business Pro 全部功能</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 多區域 (Multi-Zone) 音效分區同步</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> FastAPI 後端 API 串接支援</li>
+              <li class="feature-item"><span class="feature-icon">✓</span> 專屬聲學工程師顧問諮詢</li>
+            </ul>
+          </div>
         </div>
+      </div>
+
+      <!-- 三張卡片正下方的單一【訂閱】按鈕 -->
+      <div class="single-sub-wrapper">
+        <button id="btnSubscribe" class="btn-single-subscribe">訂閱並開始首月免費體驗</button>
       </div>
     </section>
 
@@ -794,9 +1105,9 @@
       <div class="glass-card">
         <div class="card-header">
           <h2 class="card-title">📋 傳統方案與 VibeSpace 效益對比</h2>
-          <p class="card-subtitle">供成果展發表與企劃討論使用</p>
         </div>
 
+        <!-- 電腦版表格 -->
         <div class="table-wrapper">
           <table class="custom-table">
             <thead>
@@ -829,18 +1140,98 @@
             </tbody>
           </table>
         </div>
+
+        <!-- 手機版直向對比卡片 -->
+        <div class="mobile-compare-list">
+          <div class="mobile-compare-card">
+            <div class="m-card-title">
+              <span>環境噪音與分心干擾</span>
+              <span class="tag-cost" style="font-size: 0.72rem;">無形損耗</span>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label">❌ 傳統處理解決方案代價：</div>
+              <div style="color: var(--text-muted);">員工分心導致每日平均損失工時與專注度</div>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label" style="color: var(--accent);">✨ 導入 VibeSpace 效益：</div>
+              <div style="color: var(--text-primary);">透過即時聲學動態掩蔽，維持穩定專注狀態</div>
+            </div>
+          </div>
+
+          <div class="mobile-compare-card">
+            <div class="m-card-title">
+              <span>防音與音響硬體建置</span>
+              <span class="tag-cost" style="font-size: 0.72rem;">資本支出</span>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label">❌ 傳統處理解決方案代價：</div>
+              <div style="color: var(--text-muted);">實體吸音工程與防音裝潢：NT$ 200,000+</div>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label" style="color: var(--accent);">✨ 導入 VibeSpace 效益：</div>
+              <div style="color: var(--text-primary);">純 Web 瀏覽器訂閱制：NT$ 990 /月，即開即用</div>
+            </div>
+          </div>
+
+          <div class="mobile-compare-card">
+            <div class="m-card-title">
+              <span>生產力無形價值</span>
+              <span class="tag-gain" style="font-size: 0.72rem;">無形效益</span>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label">❌ 傳統處理解決方案代價：</div>
+              <div style="color: var(--text-muted);">傳統靜態背景音無法隨現場噪音即時調整</div>
+            </div>
+            <div class="m-compare-row">
+              <div class="m-compare-label" style="color: var(--accent);">✨ 導入 VibeSpace 效益：</div>
+              <div style="color: var(--text-primary);">自動偵測噪音並即時調整混音，預估提升 3%~5% 產值</div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- Footer -->
-    <footer>
-      <p>© 2026 VibeSpace 智慧環境音效 Web App · 逢甲大學</p>
-      <p style="margin-top: 4px; font-size: 0.78rem; color: var(--text-muted);">本頁面為 B2B 商業訂閱與效益試算模組</p>
-    </footer>
+    <footer></footer>
 
   </main>
 
-  <!-- Self-Contained Interactive Script -->
+  <!-- 訂閱 Modal 彈窗 -->
+  <div id="subModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3 class="modal-title">確認訂閱 VibeSpace 服務</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">首月享免費體驗，次月到期前將自動提醒</p>
+
+      <div class="modal-summary">
+        <div class="modal-row">
+          <span>所選方案</span>
+          <strong id="modalPlanName">Business Pro 商業版</strong>
+        </div>
+        <div class="modal-row">
+          <span>訂閱費用</span>
+          <strong id="modalPlanPrice">NT$ 990 / 月</strong>
+        </div>
+        <div class="modal-row">
+          <span>首月扣款</span>
+          <strong style="color: var(--accent-emerald);">NT$ 0 (首月免費體驗)</strong>
+        </div>
+      </div>
+
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">選擇支付方式</p>
+      <div class="pay-methods">
+        <button type="button" class="pay-btn selected">💳 信用卡</button>
+        <button type="button" class="pay-btn">💚 LINE Pay</button>
+        <button type="button" class="pay-btn">🍎 Apple Pay</button>
+      </div>
+
+      <button id="btnModalConfirm" class="btn-modal-confirm">確認啟用首月免費體驗</button>
+      <div>
+        <button id="btnModalClose" class="btn-modal-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Script -->
   <script>
   document.addEventListener('DOMContentLoaded', () => {
     const empSlider = document.getElementById('empCountSlider');
@@ -869,12 +1260,36 @@
     const priceNums = document.querySelectorAll('.price-num');
     const priceUnits = document.querySelectorAll('.price-unit');
 
+    const cards = document.querySelectorAll('.price-card');
+    const btnSubscribe = document.getElementById('btnSubscribe');
+    const subModal = document.getElementById('subModal');
+    const btnModalConfirm = document.getElementById('btnModalConfirm');
+    const btnModalClose = document.getElementById('btnModalClose');
+
+    const modalPlanName = document.getElementById('modalPlanName');
+    const modalPlanPrice = document.getElementById('modalPlanPrice');
+
+    const payBtns = document.querySelectorAll('.pay-btn');
+
     let isYearly = false;
+    let selectedPlanKey = 'pro';
 
     const planPricesMonthly = {
       starter: 299,
       pro: 990,
       enterprise: 2990
+    };
+
+    const planAcousticFactor = {
+      starter: 0.8,
+      pro: 1.0,
+      enterprise: 1.25
+    };
+
+    const planNames = {
+      starter: 'Starter 基礎版',
+      pro: 'Business Pro 商業版',
+      enterprise: 'Enterprise 旗艦版'
     };
 
     function setupInputs() {
@@ -919,20 +1334,45 @@
         calculateROI();
       });
 
-      planSelect.addEventListener('change', calculateROI);
+      planSelect.addEventListener('change', () => {
+        selectedPlanKey = planSelect.value;
+        updateSelectedCardUI();
+        calculateROI();
+      });
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('click', () => {
+        selectedPlanKey = card.dataset.planKey;
+        planSelect.value = selectedPlanKey;
+        updateSelectedCardUI();
+        calculateROI();
+      });
+    });
+
+    function updateSelectedCardUI() {
+      cards.forEach(c => {
+        if (c.dataset.planKey === selectedPlanKey) {
+          c.classList.add('selected');
+        } else {
+          c.classList.remove('selected');
+        }
+      });
     }
 
     function calculateROI() {
       const empCount = parseInt(empInput.value) || 0;
       const avgSalary = parseInt(salaryInput.value) || 0;
-      const boostPct = (parseFloat(boostSlider.value) || 5) / 100;
+      const baseBoostPct = (parseFloat(boostSlider.value) || 5) / 100;
+
+      const factor = planAcousticFactor[selectedPlanKey] || 1.0;
+      const effectiveBoost = baseBoostPct * factor;
 
       const totalMonthlySalary = empCount * avgSalary;
-      const monthlyGain = Math.round(totalMonthlySalary * boostPct);
+      const monthlyGain = Math.round(totalMonthlySalary * effectiveBoost);
       const annualGain = monthlyGain * 12;
 
-      const planKey = planSelect.value;
-      const monthlyPlanCost = planPricesMonthly[planKey] || 990;
+      const monthlyPlanCost = planPricesMonthly[selectedPlanKey] || 990;
       const annualPlanCost = monthlyPlanCost * 12;
 
       const annualNetGain = annualGain - annualPlanCost;
@@ -971,10 +1411,10 @@
       }
 
       if (roiPercentage < 0) {
-        outROI.textContent = roiPercentage + '%';
+        outROI.textContent = roiPercentage.toLocaleString() + '%';
         outROI.classList.add('negative');
       } else {
-        outROI.textContent = '+' + roiPercentage + '%';
+        outROI.textContent = '+' + roiPercentage.toLocaleString() + '%';
         outROI.classList.remove('negative');
       }
 
@@ -986,7 +1426,7 @@
       }
       ratio = Math.max(0, Math.min(100, ratio));
       progressBarFill.style.width = ratio + '%';
-      progressText.textContent = `產值價值 (NT$ ${monthlyGain.toLocaleString()}) vs 系統月費 (NT$ ${monthlyPlanCost.toLocaleString()})`;
+      progressText.textContent = `NT$ ${monthlyGain.toLocaleString()} vs NT$ ${monthlyPlanCost.toLocaleString()}`;
     }
 
     btnMonthly.addEventListener('click', () => {
@@ -1021,6 +1461,32 @@
 
       calculateROI();
     }
+
+    payBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        payBtns.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+
+    btnSubscribe.addEventListener('click', () => {
+      const price = isYearly 
+        ? Math.round(planPricesMonthly[selectedPlanKey] * 0.8) 
+        : planPricesMonthly[selectedPlanKey];
+      
+      modalPlanName.textContent = planNames[selectedPlanKey];
+      modalPlanPrice.textContent = `NT$ ${price.toLocaleString()} / 月 ${isYearly ? '(年繳優惠)' : ''}`;
+      subModal.classList.add('active');
+    });
+
+    btnModalClose.addEventListener('click', () => {
+      subModal.classList.remove('active');
+    });
+
+    btnModalConfirm.addEventListener('click', () => {
+      alert(`🎉 感謝體驗 VibeSpace！\n\n已成功為您啟用【${planNames[selectedPlanKey]}】首月免費體驗，並已載入全區聲學混音模組。`);
+      subModal.classList.remove('active');
+    });
 
     setupInputs();
     calculateROI();
