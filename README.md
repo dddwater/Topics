@@ -41,17 +41,24 @@ VibeSpace 是一個以瀏覽器運作的智慧環境音效網站。使用者可�
 - 將營建與空間知識轉換為後端及混音引擎可以使用的選項。
 - 設定項目：
   - 空間坪數：小型／中型／大型。
-  - 天花板材質：輕鋼架／水泥／木作。
-  - 空調類型：分離式／中央空調。
+  - 使用環境：餐廳／辦公室／咖啡廳／教室或會議室。
+  - 空間類別：開放／半開放／封閉。
+- 使用者儲存設定後，播放器會優先使用手動聲學模式；天花板、空調與混音參數由系統推導。
 - 主要交付：設定頁的 HTML、CSS、JavaScript，以及明確的設定資料格式。
 
 建議設定資料格式：
 
 ```json
 {
+  "version": 2,
+  "source": "manual",
   "spaceSize": "medium",
-  "ceilingMaterial": "wood",
-  "airConditioning": "central"
+  "environment": "office",
+  "spaceType": "enclosed",
+  "acousticProfile": {
+    "id": "near-field",
+    "name": "近場清晰"
+  }
 }
 ```
 

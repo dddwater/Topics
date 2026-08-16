@@ -8,22 +8,87 @@
   const meterFill = document.querySelector("#profile-meter-fill");
   const saveStatus = document.querySelector("#save-status");
 
-  const reflectionScores = {
+  const scores = {
     spaceSize: { small: 1, medium: 2, large: 3 },
-    ceilingMaterial: { steel: 1, wood: 2, concrete: 3 }
+    environment: { office: 1, classroom: 1, cafe: 2, restaurant: 3 },
+    spaceType: { enclosed: 1, semiOpen: 2, open: 3 }
   };
 
-  function getSettings() {
+  const environmentLabels = {
+    restaurant: "餐廳",
+    office: "辦公室",
+    cafe: "咖啡廳",
+    classroom: "教室／會議室"
+  };
+
+  const spaceTypeLabels = {
+    open: "開放空間",
+    semiOpen: "半開放空間",
+    enclosed: "封閉空間"
+  };
+
+  const profiles = {
+    near: {
+      id: "near-field",
+      name: "近場清晰",
+      description: "以語音清晰與細節為主，降低空間反射造成的干擾。",
+      baseGain: 0.04,
+      maxGain: 0.065,
+      noiseSensitivity: 0.45,
+      updateInterval: 520
+    },
+    balanced: {
+      id: "balanced-surround",
+      name: "平衡環繞",
+      description: "兼顧人聲與環境底噪，採用平穩、自然的動態混音。",
+      baseGain: 0.055,
+      maxGain: 0.08,
+      noiseSensitivity: 0.5,
+      updateInterval: 400
+    },
+    immersive: {
+      id: "wide-immersive",
+      name: "寬域沉浸",
+      description: "針對較大或開放空間加強覆蓋，並更快回應環境變化。",
+      baseGain: 0.065,
+      maxGain: 0.095,
+      noiseSensitivity: 0.55,
+      updateInterval: 300
+    }
+  };
+
+  function getSelections() {
     const data = new FormData(form);
     return {
       spaceSize: data.get("spaceSize"),
-      ceilingMaterial: data.get("ceilingMaterial"),
-      airConditioning: data.get("airConditioning")
+      environment: data.get("environment"),
+      spaceType: data.get("spaceType")
+    };
+  }
+
+  function resolveProfile(settings) {
+    const total = scores.spaceSize[settings.spaceSize]
+      + scores.environment[settings.environment]
+      + scores.spaceType[settings.spaceType];
+
+    if (total >= 8) return profiles.immersive;
+    if (total >= 5) return profiles.balanced;
+    return profiles.near;
+  }
+
+  function buildSettings() {
+    const selections = getSelections();
+    return {
+      version: 2,
+      source: "manual",
+      ...selections,
+      acousticProfile: { ...resolveProfile(selections) },
+      savedAt: new Date().toISOString()
     };
   }
 
   function updateProfile() {
-    const settings = getSettings();
+    const settings = getSelections();
     const completed = Object.values(settings).filter(Boolean).length;
     meterFill.style.width = `${(completed / 3) * 100}%`;
 
@@ -33,18 +98,9 @@
       return;
     }
 
-    const reflection = reflectionScores.spaceSize[settings.spaceSize]
-      + reflectionScores.ceilingMaterial[settings.ceilingMaterial];
-
-    profileName.textContent = reflection >= 5
-      ? "寬域沉浸"
-      : reflection >= 3
-        ? "平衡環繞"
-        : "近場清晰";
-
-    profileDescription.textContent = settings.airConditioning === "central"
-      ? "建議採用穩定底噪補償，並保留較寬的動態混音範圍。"
-      : "建議採用即時底噪偵測，柔和調整環境音的細節與音量。";
+    const profile = resolveProfile(settings);
+    profileName.textContent = profile.name;
+    profileDescription.textContent = `${environmentLabels[settings.environment]}・${spaceTypeLabels[settings.spaceType]}：${profile.description}`;
   }
 
   function restoreSettings() {
@@ -52,7 +108,8 @@
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!saved) return;
 
-      Object.entries(saved).forEach(([name, value]) => {
+      ["spaceSize", "environment", "spaceType"].forEach((name) => {
+        const value = saved[name];
         const input = form.querySelector(`[name="${name}"][value="${value}"]`);
         if (input) input.checked = true;
       });
@@ -70,14 +127,14 @@
     event.preventDefault();
     if (!form.reportValidity()) return;
 
-    const settings = getSettings();
+    const settings = buildSettings();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     window.dispatchEvent(new CustomEvent("vibespace:settings-saved", { detail: settings }));
-    saveStatus.textContent = "設定已儲存在這台裝置，可供播放器讀取。";
+    saveStatus.textContent = `已儲存「${settings.acousticProfile.name}」，偵測頁面將優先使用這組設定。`;
   });
 
   window.VibeSpaceSettings = {
-    get: getSettings,
+    get: buildSettings,
     storageKey: STORAGE_KEY
   };
 
