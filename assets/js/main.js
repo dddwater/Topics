@@ -1,150 +1,147 @@
-// Web Audio engine adapted from PR #4 for the delivery UI.
+// Web Audio engine — mic analysis feeds the vibespace context-engine state
+// machine (assets/js/context-engine.js), which drives a crossfading track
+// player (assets/js/soundscape-player.js) instead of the previous raw
+// oscillator tone. Ported from emma63194/vibespace (app/page.tsx cockpit).
 (() => {
+  const { decideContext, DEFAULT_CALIBRATION } = window.VibeSpaceContextEngine;
+  const { SoundscapePlayer, getSoundscapeMeta, getSoundscapeTrackCount } = window.VibeSpaceSoundscape;
+
+  const STORAGE_KEY = "vibespace.spaceSettings";
+  const DEFAULT_PROFILE = {
+    id: "automatic",
+    name: "自動偵測",
+    description: "尚未套用場地設定，使用系統預設校準。",
+  };
+
+  const CALIBRATION_PRESETS = {
+    "near-field": {
+      quietBaselineDbRel: -50,
+      normalBaselineDbRel: -40,
+      preferredGainDb: -26,
+      minimumGainDb: -36,
+      hardCeilingGainDb: -18,
+    },
+    "balanced-surround": DEFAULT_CALIBRATION,
+    "wide-immersive": {
+      quietBaselineDbRel: -42,
+      normalBaselineDbRel: -32,
+      preferredGainDb: -18,
+      minimumGainDb: -28,
+      hardCeilingGainDb: -10,
+    },
+  };
+
   let audioContext = null;
   let analyser = null;
   let microphoneSource = null;
   let microphoneStream = null;
   let animationFrameId = null;
   let onLevel = null;
-  let oscillator = null;
-  let gainNode = null;
-  let smoothedDominantFrequency = 0;
-  let lastOscillatorUpdate = 0;
+  let onDecision = null;
+  let player = null;
 
-  const STORAGE_KEY = "vibespace.spaceSettings";
-  const DEFAULT_PROFILE = {
-    id: "automatic",
-    name: "自動偵測",
-    baseGain: 0.055,
-    maxGain: 0.08,
-    noiseSensitivity: 0.5,
-    updateInterval: 400
-  };
   let activeProfile = DEFAULT_PROFILE;
   let settingsSource = "automatic";
+  let operationMode = "balanced";
+  let calibration = DEFAULT_CALIBRATION;
 
-  function loadSavedProfile() {
+  let currentState = "social";
+  let currentGainDb = DEFAULT_CALIBRATION.preferredGainDb;
+  let startedAt = 0;
+  let smoothedLongTermDb = DEFAULT_CALIBRATION.normalBaselineDbRel;
+  let trackIndexes = { low: 0, medium: 0, high: 0 };
+
+  function loadSavedSettings() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       const profile = saved?.acousticProfile;
       const validManualSettings = saved?.version === 2
         && saved?.source === "manual"
         && profile?.name
-        && Number.isFinite(profile?.baseGain)
-        && Number.isFinite(profile?.maxGain)
-        && Number.isFinite(profile?.noiseSensitivity)
-        && Number.isFinite(profile?.updateInterval);
+        && profile?.id;
 
-      if (!validManualSettings) return null;
-      return profile;
+      return {
+        profile: validManualSettings ? profile : null,
+        operationMode: saved?.operationMode || "balanced",
+      };
     } catch (error) {
-      return null;
+      return { profile: null, operationMode: "balanced" };
     }
   }
 
   function getConfiguration() {
-    const savedProfile = loadSavedProfile();
+    const saved = loadSavedSettings();
+    const profile = saved.profile || DEFAULT_PROFILE;
     return {
-      source: savedProfile ? "manual" : "automatic",
-      profile: savedProfile || DEFAULT_PROFILE
+      source: saved.profile ? "manual" : "automatic",
+      profile,
+      operationMode: saved.operationMode,
+      calibration: CALIBRATION_PRESETS[profile.id] || DEFAULT_CALIBRATION,
     };
   }
 
-  function getDominantFrequency() {
-    const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(frequencyData);
-
-    let maxMagnitude = 0;
-    let maxIndex = 0;
-    frequencyData.forEach((magnitude, index) => {
-      if (magnitude > maxMagnitude) {
-        maxMagnitude = magnitude;
-        maxIndex = index;
-      }
+  function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
+    const decision = decideContext({
+      shortTermDbRel,
+      longTermDbRel,
+      transientScore,
+      dataQuality: 0.94,
+      sustainedSeconds,
+      currentState,
+      currentGainDb,
+      operationMode,
+      calibration,
+      canChangeTrack: true,
+      manualHold: operationMode === "manual",
     });
 
-    return maxIndex > 0
-      ? (maxIndex * audioContext.sampleRate) / analyser.fftSize
-      : 0;
-  }
+    if (decision.state !== "transient" && decision.state !== "uncertain") {
+      currentState = decision.state;
+    }
+    currentGainDb = decision.targetGainDb;
 
-  function quantizeToPentatonicScale(frequency) {
-    if (!frequency || frequency <= 0) return 0;
-
-    const majorPentatonic = [0, 2, 4, 7, 9];
-    const rootMidi = 57;
-    const midi = 69 + 12 * Math.log2(frequency / 440);
-    let closestMidi = rootMidi;
-    let closestDistance = Infinity;
-
-    for (let octave = -4; octave <= 4; octave += 1) {
-      majorPentatonic.forEach((semitone) => {
-        const candidate = rootMidi + octave * 12 + semitone;
-        const distance = Math.abs(candidate - midi);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestMidi = candidate;
-        }
-      });
+    if (player) {
+      player.setTargetGainDb(decision.targetGainDb);
+      player.setTrack(decision.energy, trackIndexes[decision.energy]);
     }
 
-    return 440 * 2 ** ((closestMidi - 69) / 12);
+    onDecision?.(decision, { longTermDbRel, shortTermDbRel });
+    return decision;
   }
 
-  function readMicrophone() {
+  function measure() {
     if (!analyser || !audioContext) return;
 
-    const samples = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(samples);
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
     let sum = 0;
-
-    samples.forEach((sample) => {
-      const centered = (sample - 128) / 128;
-      sum += centered * centered;
-    });
-
+    for (let index = 0; index < samples.length; index += 1) sum += samples[index] ** 2;
     const rms = Math.sqrt(sum / samples.length);
-    const dominantFrequency = getDominantFrequency();
-    const quantizedFrequency = quantizeToPentatonicScale(dominantFrequency);
+    const db = 20 * Math.log10(Math.max(rms, 0.00001));
 
-    if (dominantFrequency > 0) {
-      smoothedDominantFrequency +=
-        (dominantFrequency - smoothedDominantFrequency) * 0.12;
-    }
+    smoothedLongTermDb = smoothedLongTermDb * 0.94 + db * 0.06;
+    const spike = Math.max(0, db - smoothedLongTermDb);
+    const transientScore = Math.min(1, spike / 11);
+    const sustainedSeconds = Math.min(120, (Date.now() - startedAt) / 1000);
 
-    const now = Date.now();
-    if (
-      oscillator &&
-      smoothedDominantFrequency > 0 &&
-      now - lastOscillatorUpdate >= activeProfile.updateInterval
-    ) {
-      const targetFrequency = Math.min(
-        Math.max(quantizeToPentatonicScale(smoothedDominantFrequency), 40),
-        5000
-      );
-      oscillator.frequency.setTargetAtTime(
-        targetFrequency,
-        audioContext.currentTime,
-        0.06
-      );
-      lastOscillatorUpdate = now;
-    }
+    const decision = runDecision(smoothedLongTermDb, db, transientScore, sustainedSeconds);
+    onLevel?.(Math.min(1, Math.max(0, (db + 60) / 60)), { rms, db, decision });
 
-    if (gainNode) {
-      const targetGain = Math.min(
-        activeProfile.maxGain,
-        Math.max(0.015, activeProfile.baseGain - rms * activeProfile.noiseSensitivity)
-      );
-      gainNode.gain.setTargetAtTime(targetGain, audioContext.currentTime, 0.12);
-    }
+    animationFrameId = requestAnimationFrame(measure);
+  }
 
-    onLevel?.(Math.min(1, rms * 8), {
-      rms,
-      dominantFrequency,
-      quantizedFrequency,
-    });
+  function skipTrack() {
+    const energy = currentDecisionEnergy();
+    const nextIndex = (trackIndexes[energy] + 1) % getSoundscapeTrackCount(energy);
+    trackIndexes = { ...trackIndexes, [energy]: nextIndex };
+    if (player) player.setTrack(energy, nextIndex);
+    return getSoundscapeMeta(energy, nextIndex);
+  }
 
-    animationFrameId = requestAnimationFrame(readMicrophone);
+  function currentDecisionEnergy() {
+    if (currentState === "quiet") return "low";
+    if (currentState === "busy") return "high";
+    return "medium";
   }
 
   async function start(options = {}) {
@@ -154,53 +151,66 @@
     }
 
     onLevel = options.onLevel;
+    onDecision = options.onDecision;
+
     const configuration = getConfiguration();
     activeProfile = configuration.profile;
     settingsSource = configuration.source;
-    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === "suspended") await audioContext.resume();
+    operationMode = configuration.operationMode;
+    calibration = configuration.calibration;
+    currentState = "social";
+    currentGainDb = calibration.preferredGainDb;
+    smoothedLongTermDb = calibration.normalBaselineDbRel;
+    trackIndexes = { low: 0, medium: 0, high: 0 };
 
-    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    microphoneStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+    });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
     microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
     microphoneSource.connect(analyser);
 
-    gainNode = audioContext.createGain();
-    gainNode.gain.value = activeProfile.baseGain;
-    gainNode.connect(audioContext.destination);
-    oscillator = audioContext.createOscillator();
-    oscillator.type = "sine";
-    oscillator.frequency.value = 220;
-    oscillator.connect(gainNode);
-    oscillator.start();
+    player ||= new SoundscapePlayer();
+    await player.play("medium", currentGainDb, trackIndexes.medium);
 
-    smoothedDominantFrequency = 0;
-    lastOscillatorUpdate = 0;
-    readMicrophone();
-    return { source: settingsSource, profileName: activeProfile.name };
+    startedAt = Date.now();
+    measure();
+    return { source: settingsSource, profileName: activeProfile.name, operationMode };
   }
 
-  function stop() {
+  async function stop() {
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
     microphoneSource?.disconnect();
     microphoneSource = null;
     microphoneStream?.getTracks().forEach((track) => track.stop());
     microphoneStream = null;
-    if (oscillator) {
-      oscillator.stop();
-      oscillator.disconnect();
-    }
-    oscillator = null;
-    gainNode?.disconnect();
-    gainNode = null;
+    if (audioContext && audioContext.state !== "closed") await audioContext.close();
+    audioContext = null;
     analyser = null;
+    await player?.pause();
     onLevel = null;
+    onDecision = null;
   }
 
-  window.VibeAudioEngine = { start, stop, getConfiguration };
-  window.addEventListener("pagehide", stop);
+  function setOperationMode(mode) {
+    operationMode = mode;
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      saved.operationMode = mode;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    } catch (error) {
+      // Ignore storage failures (e.g. private browsing) — mode still applies live.
+    }
+  }
+
+  window.VibeAudioEngine = { start, stop, getConfiguration, skipTrack, setOperationMode };
+  window.addEventListener("pagehide", () => {
+    stop();
+    void player?.destroy();
+  });
 })();
 
 (() => {
@@ -209,15 +219,24 @@
   const status = document.getElementById("vibeStatus");
   const meter = document.querySelector(".vibe-meter");
   const bars = Array.from(document.querySelectorAll(".vibe-meter__bar"));
+  const modeButtons = Array.from(document.querySelectorAll("[data-vibe-mode]"));
+  const trackLabel = document.getElementById("vibeTrack");
+  const skipButton = document.getElementById("vibeSkip");
 
   const IDLE_HEIGHT = 5;
   const MAX_HEIGHT = 34;
+  const STATE_LABELS = {
+    quiet: "Quiet · 安靜沉著",
+    social: "Social · 穩定交流",
+    busy: "Busy · 尖峰活躍",
+    transient: "Transient · 短暫事件",
+    uncertain: "Uncertain · 等待確認",
+  };
 
   let active = false;
   let simTimer = null;
   let phase = 0;
 
-  // 以中央為峰值的權重，讓兩側的 bar 自然收斂
   const weights = bars.map((_, i) => {
     const center = (bars.length - 1) / 2;
     return 1 - Math.abs(i - center) / (center + 1.4);
@@ -237,7 +256,22 @@
     });
   }
 
-  // 聲音引擎尚未接上時的模擬訊號（平滑的偽隨機呼吸）
+  function renderDecision(decision) {
+    if (!decision) return;
+    status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}`;
+    if (trackLabel) {
+      const energy = decision.energy;
+      const meta = window.VibeSpaceSoundscape.getSoundscapeMeta(energy, 0);
+      trackLabel.textContent = `${meta.title} · ${meta.subtitle} · ${decision.targetGainDb.toFixed(1)} dB`;
+    }
+  }
+
+  function setActiveMode(mode) {
+    modeButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.vibeMode === mode);
+    });
+  }
+
   function startSimulation() {
     simTimer = setInterval(() => {
       phase += 0.14;
@@ -261,8 +295,12 @@
 
     try {
       if (window.VibeAudioEngine?.start) {
-        const engineState = await window.VibeAudioEngine.start({ onLevel: render });
-        status.textContent = engineState?.source === "manual"
+        const engineState = await window.VibeAudioEngine.start({
+          onLevel: render,
+          onDecision: renderDecision,
+        });
+        setActiveMode(engineState.operationMode);
+        status.textContent = engineState.source === "manual"
           ? `已套用「${engineState.profileName}」・聆聽環境中`
           : "自動偵測中・聆聽環境音量";
       } else {
@@ -280,25 +318,44 @@
     }
   }
 
-  function stop() {
+  async function stop() {
     active = false;
     toggle.setAttribute("aria-pressed", "false");
     label.textContent = "開始";
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
+    if (trackLabel) trackLabel.textContent = "";
 
-    window.VibeAudioEngine?.stop?.();
+    await window.VibeAudioEngine?.stop?.();
     stopSimulation();
     reset();
   }
 
   toggle.addEventListener("click", () => {
-    if (active) stop();
-    else start();
+    if (active) void stop();
+    else void start();
   });
+
+  modeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const mode = button.dataset.vibeMode;
+      window.VibeAudioEngine?.setOperationMode?.(mode);
+      setActiveMode(mode);
+    });
+  });
+
+  skipButton?.addEventListener("click", () => {
+    if (!active) return;
+    const meta = window.VibeAudioEngine?.skipTrack?.();
+    if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
+  });
+
   const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();
-  if (initialConfiguration?.source === "manual") {
-    status.textContent = `已準備「${initialConfiguration.profile.name}」手動設定`;
+  if (initialConfiguration) {
+    setActiveMode(initialConfiguration.operationMode);
+    if (initialConfiguration.source === "manual") {
+      status.textContent = `已準備「${initialConfiguration.profile.name}」手動設定`;
+    }
   }
   reset();
 })();
