@@ -387,6 +387,67 @@ body {
   }
 }
 
+/* ---------- 曲目與播放控制 ---------- */
+
+.vibe-track {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 1.2rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.vibe-track__skip {
+  border: 1px solid var(--hairline);
+  background: var(--glass);
+  color: var(--text-primary);
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: border-color 0.4s var(--ease), background 0.4s var(--ease);
+}
+
+.vibe-track__skip:hover {
+  border-color: rgba(216, 195, 160, 0.4);
+  background: rgba(216, 195, 160, 0.08);
+}
+
+/* ---------- 營運意圖切換 ---------- */
+
+.vibe-modes {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.vibe-mode {
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: all 0.4s var(--ease);
+}
+
+.vibe-mode:hover {
+  border-color: rgba(216, 195, 160, 0.35);
+  color: var(--text-primary);
+}
+
+.vibe-mode.is-active {
+  border-color: var(--accent);
+  background: rgba(216, 195, 160, 0.12);
+  color: var(--accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vibe-glow,
   .vibe-grain,

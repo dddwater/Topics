@@ -66,6 +66,10 @@
     };
   }
 
+  function getOperationMode() {
+    return new FormData(form).get("operationMode") || "balanced";
+  }
+
   function resolveProfile(settings) {
     const total = scores.spaceSize[settings.spaceSize]
       + scores.environment[settings.environment]
@@ -82,6 +86,7 @@
       version: 2,
       source: "manual",
       ...selections,
+      operationMode: getOperationMode(),
       acousticProfile: { ...resolveProfile(selections) },
       savedAt: new Date().toISOString()
     };
@@ -115,6 +120,11 @@
         const input = form.querySelector(`[name="${name}"][value="${value}"]`);
         if (input) input.checked = true;
       });
+
+      if (saved.operationMode) {
+        const modeInput = form.querySelector(`[name="operationMode"][value="${saved.operationMode}"]`);
+        if (modeInput) modeInput.checked = true;
+      }
     } catch (error) {
       localStorage.removeItem(STORAGE_KEY);
     }
