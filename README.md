@@ -4,6 +4,24 @@
 
 VibeSpace 是一個以瀏覽器運作的智慧環境音效網站。使用者可在咖啡廳、工作空間或其他室內場域開啟網站並授權麥克風；系統分析即時環境音量，再透過 Web Audio API 自動調整背景音樂、音量與混音效果。
 
+## 自動選曲與 Freesound 候選來源
+
+- 正式播放只使用已下載、已審核且記錄來源的本機 CC0 曲庫。
+- 每首歌曲隨機循環 2 或 3 次，再於相同環境分類內隨機換歌。
+- 每個分類保留最近 2 首的選曲紀錄，盡量避免短時間重複。
+- 只有 Quiet、Social、Busy 偵測狀態改變時，才會切換到另一個分類。
+- Freesound API 僅作為候選搜尋來源，不會直接播放或正式加入未審核歌曲。
+- 候選結果必須是 CC0、Music 類別、至少 60 秒，並提供可播放預覽。
+- 下載或正式加入候選曲前，先呼叫 `VibeSpaceFreesound.saveLicenseSnapshot(candidate)` 保存作者、來源、授權與時間快照。
+
+Freesound API Key 不得提交到 Git。測試時可在載入應用程式前以執行環境注入：
+
+```js
+window.VIBESPACE_FREESOUND_API_KEY = "YOUR_LOCAL_TEST_TOKEN";
+```
+
+沒有設定 Key 時，Freesound 候選功能會保持停用，本機曲庫仍可正常播放。
+
 ## Demo 使用情境
 
 1. 使用者以筆電或 iPad 開啟 VibeSpace。
