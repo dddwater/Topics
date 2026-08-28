@@ -19,6 +19,7 @@
     <span class="vibe-nav__brand">VibeSpace</span>
     <div class="vibe-nav__links">
       <a href="settings.html">空間設定</a>
+      <a href="insights.html">品牌聲景</a>
       <a href="pricing.html">方案與定價</a>
     </div>
   </nav>
@@ -52,8 +53,22 @@
     </div>
 
     <p class="vibe-status" id="vibeStatus">尚未啟動</p>
+
+    <div class="vibe-track" aria-live="polite">
+      <span id="vibeTrack"></span>
+      <button id="vibeSkip" type="button" class="vibe-track__skip">下一首 »</button>
+    </div>
+
+    <div class="vibe-modes" role="group" aria-label="營運意圖">
+      <button type="button" class="vibe-mode" data-vibe-mode="comfort">Comfort</button>
+      <button type="button" class="vibe-mode" data-vibe-mode="balanced">Balanced</button>
+      <button type="button" class="vibe-mode" data-vibe-mode="flow">Flow</button>
+      <button type="button" class="vibe-mode" data-vibe-mode="manual">Manual</button>
+    </div>
   </main>
 
-  <script src="assets/js/main.js?v=audio-engine"></script>
+  <script src="assets/js/context-engine.js"></script>
+  <script src="assets/js/soundscape-player.js"></script>
+  <script src="assets/js/main.js?v=vibespace-core-port"></script>
 </body>
 </html>

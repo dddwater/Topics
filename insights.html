@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>品牌聲景｜VibeSpace</title>
+  <style>
+  :root {
+    --ink: #08090c;
+    --text-primary: rgba(240, 238, 234, 0.94);
+    --text-muted: rgba(240, 238, 234, 0.46);
+    --hairline: rgba(240, 238, 234, 0.1);
+    --glass: rgba(240, 238, 234, 0.035);
+    --glass-card: rgba(18, 20, 28, 0.75);
+    --accent: #d8c3a0;
+    --accent-emerald: #34d399;
+    --accent-cyan: #38bdf8;
+    --quiet: #38bdf8;
+    --social: #d8c3a0;
+    --busy: #fb7185;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scrollbar-gutter: stable; }
+
+  body {
+    background: var(--ink);
+    color: var(--text-primary);
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang TC",
+      "Noto Sans TC", "Helvetica Neue", sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .vibe-bg { position: fixed; inset: 0; z-index: -3; overflow: hidden; }
+  .vibe-glow { position: absolute; border-radius: 50%; filter: blur(110px); will-change: transform; animation: drift 40s var(--ease) infinite; }
+  .vibe-glow--a { width: 70vmax; height: 70vmax; top: -28%; left: -18%; background: #2a3550; opacity: 0.5; animation-duration: 44s; }
+  .vibe-glow--b { width: 60vmax; height: 60vmax; bottom: -30%; right: -14%; background: #1e3a38; opacity: 0.42; animation-duration: 52s; animation-delay: -14s; }
+  .vibe-glow--c { width: 44vmax; height: 44vmax; top: 26%; right: 16%; background: #4a3428; opacity: 0.34; animation-duration: 60s; animation-delay: -30s; }
+  @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(4%, 6%, 0) scale(1.14); } }
+  .vibe-vignette { position: fixed; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(4, 5, 7, 0.55) 78%, rgba(4, 5, 7, 0.9) 100%); }
+  .vibe-grain { position: fixed; inset: -50%; z-index: -1; pointer-events: none; opacity: 0.16; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E"); animation: grain 700ms steps(1) infinite; }
+  @keyframes grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-2%, 1%); } 50% { transform: translate(1%, -2%); } 75% { transform: translate(-1%, -1%); } 100% { transform: translate(2%, 1%); } }
+
+  .vibe-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2.5rem; border-bottom: 1px solid var(--hairline); background: rgba(8, 9, 12, 0.35); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
+  .vibe-nav__brand { font-size: 0.78rem; font-weight: 400; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-primary); text-decoration: none; }
+  .vibe-nav__links { display: flex; }
+  .vibe-nav__links a { position: relative; margin-left: 2rem; color: var(--text-muted); font-size: 0.76rem; letter-spacing: 0.14em; text-decoration: none; white-space: nowrap; transition: color 0.5s var(--ease); }
+  .vibe-nav__links a::after { content: ""; position: absolute; left: 0; bottom: -5px; width: 100%; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease); }
+  .vibe-nav__links a:hover, .vibe-nav__links a.active { color: var(--text-primary); }
+  .vibe-nav__links a:hover::after, .vibe-nav__links a.active::after { transform: scaleX(1); }
+  @media (max-width: 640px) { .vibe-nav { padding: 1.15rem 1.5rem; } .vibe-nav__links a { margin-left: 1.25rem; font-size: 0.7rem; } }
+
+  .container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 6rem 1.25rem 3rem; }
+  .hero { text-align: center; padding: 2rem 0 1.5rem; }
+  .eyebrow { margin: 0 0 1.1rem; color: var(--accent); font-size: 0.66rem; font-weight: 400; letter-spacing: 0.42em; text-transform: uppercase; opacity: 0.75; }
+  .hero h1 { margin: 0 0 0.75rem; font-size: clamp(1.3rem, 5.2vw, 3rem); font-weight: 200; letter-spacing: 0.06em; line-height: 1.25; }
+
+  .profile-select { display: flex; align-items: center; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; font-size: 0.78rem; color: var(--text-muted); letter-spacing: 0.08em; }
+  .profile-select select { background: var(--glass-card); color: var(--text-primary); border: 1px solid var(--hairline); border-radius: 10px; padding: 0.5rem 0.9rem; font-size: 0.82rem; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem; }
+  @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--glass-card); border: 1px solid var(--hairline); border-radius: 16px; padding: 1.75rem; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 0 1px 24px rgba(240, 238, 234, 0.03), 0 20px 50px rgba(0, 0, 0, 0.5); }
+  .panel-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.25rem; }
+  .section-label { font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.18em; text-transform: uppercase; }
+  .tiny-note { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.05em; }
+
+  .donut-row { display: flex; align-items: center; gap: 1.75rem; flex-wrap: wrap; justify-content: center; }
+  .donut { width: 168px; height: 168px; border-radius: 50%; display: grid; place-items: center; }
+  .donut div { width: 108px; height: 108px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; text-align: center; }
+  .donut strong { font-size: 1.4rem; font-weight: 300; }
+  .donut span { display: block; font-size: 0.66rem; color: var(--text-muted); margin-top: 0.2rem; letter-spacing: 0.06em; }
+  .legend div { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; font-size: 0.82rem; }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend strong { margin-left: auto; font-weight: 400; color: var(--text-primary); }
+  .legend span { color: var(--text-muted); min-width: 3.5rem; }
+
+  .profile-chip { background: rgba(216, 195, 160, 0.12); border: 1px solid var(--accent); color: var(--accent); border-radius: 20px; padding: 0.25rem 0.8rem; font-size: 0.7rem; letter-spacing: 0.08em; }
+  .brand-gap p { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.25rem; }
+  .compare-row { display: grid; grid-template-columns: 4.5rem 1fr 3.5rem; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem; font-size: 0.78rem; }
+  .compare-track { position: relative; height: 8px; background: rgba(240, 238, 234, 0.08); border-radius: 4px; }
+  .compare-track i.actual { position: absolute; inset: 0; border-radius: 4px; }
+  .compare-track b { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text-primary); }
+  .compare-row strong.over { color: var(--busy); }
+  .compare-row strong.under { color: var(--quiet); }
+  .compare-row strong.match { color: var(--accent-emerald); }
+
+  .heatmap-panel { margin-top: 1.5rem; }
+  .heatmap-hours { display: grid; grid-template-columns: 3.5rem repeat(6, 1fr); font-size: 0.66rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .heatmap-row { display: grid; grid-template-columns: 3.5rem 1fr; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .heatmap-row strong { font-size: 0.72rem; font-weight: 300; color: var(--text-muted); }
+  .heatmap-row > div { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+  .heatmap-row i { display: block; height: 16px; border-radius: 3px; opacity: 0.85; }
+  .heat-quiet { background: var(--quiet); }
+  .heat-social { background: var(--social); }
+  .heat-busy { background: var(--busy); }
+
+  .insights-lower-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1.5rem; margin-top: 1.5rem; }
+  @media (max-width: 760px) { .insights-lower-grid { grid-template-columns: 1fr; } }
+  .timeline-strip { display: flex; gap: 3px; }
+  .timeline-strip i { flex: 1; height: 46px; border-radius: 4px; display: flex; align-items: flex-end; justify-content: center; font-size: 0.55rem; color: rgba(8,9,12,0.6); padding-bottom: 2px; opacity: 0.85; }
+  .time-quiet { background: var(--quiet); }
+  .time-social { background: var(--social); }
+  .time-busy { background: var(--busy); }
+  .recommendation-panel h2 { font-size: 1.05rem; font-weight: 300; margin: 0.75rem 0; }
+  .recommendation-panel p { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1rem; }
+  .insight-numbers { display: flex; gap: 1.5rem; font-size: 0.78rem; color: var(--text-muted); }
+  .insight-numbers strong { display: block; font-size: 1.2rem; font-weight: 300; color: var(--text-primary); }
+  </style>
+</head>
+<body>
+
+  <div class="vibe-bg">
+    <div class="vibe-glow vibe-glow--a"></div>
+    <div class="vibe-glow vibe-glow--b"></div>
+    <div class="vibe-glow vibe-glow--c"></div>
+  </div>
+  <div class="vibe-vignette"></div>
+  <div class="vibe-grain"></div>
+
+  <header class="vibe-nav">
+    <a href="index.html" class="vibe-nav__brand">VibeSpace</a>
+    <nav class="vibe-nav__links">
+      <a href="settings.html">空間設定</a>
+      <a href="insights.html" class="active">品牌聲景</a>
+      <a href="pricing.html">方案與定價</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">VIBE INSIGHTS · 最近 7 日</p>
+      <h1>你的品牌，聽起來像什麼？</h1>
+      <label class="profile-select">品牌目標
+        <select id="profile-select"></select>
+      </label>
+    </section>
+
+    <div class="grid-2">
+      <article class="panel atmosphere-profile">
+        <div class="panel-heading"><span class="section-label">本週實際聲景</span><span class="tiny-note" id="history-count"></span></div>
+        <div class="donut-row">
+          <div class="donut" id="donut">
+            <div><strong id="donut-social">–</strong><span>Social 為主</span></div>
+          </div>
+          <div class="legend" id="legend"></div>
+        </div>
+      </article>
+
+      <article class="panel brand-gap">
+        <div class="panel-heading"><span class="section-label">品牌目標差異</span><span class="profile-chip" id="profile-chip"></span></div>
+        <p id="profile-description"></p>
+        <div id="gap-rows"></div>
+      </article>
+    </div>
+
+    <article class="panel heatmap-panel">
+      <div class="panel-heading">
+        <div><span class="section-label">週間聲景熱圖</span></div>
+        <span class="tiny-note">顏色代表每小時的主要狀態</span>
+      </div>
+      <div class="heatmap-hours"><span></span><span>8:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span></div>
+      <div id="heatmap"></div>
+    </article>
+
+    <div class="insights-lower-grid">
+      <article class="panel timeline-panel">
+        <div class="panel-heading"><span class="section-label">今日時間軸</span><span class="tiny-note">08:00–20:00</span></div>
+        <div class="timeline-strip" id="timeline"></div>
+      </article>
+      <article class="panel recommendation-panel">
+        <span class="section-label">觀察建議 · 非因果結論</span>
+        <h2 id="recommendation-title"></h2>
+        <p id="recommendation-body"></p>
+        <div class="insight-numbers">
+          <span><strong id="stat-transients"></strong>短暫事件</span>
+          <span><strong id="stat-adjustments"></strong>自動調整</span>
+          <span><strong id="stat-overrides"></strong>人工覆寫</span>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <script src="assets/js/insights.js"></script>
+  <script src="assets/js/insights-view.js"></script>
+</body>
+</html>
