@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeSpace 帳號</title>
+  <link rel="stylesheet" href="assets/css/account.css" />
+</head>
+<body>
+  <main class="account-shell">
+    <section class="account-card">
+      <a class="brand" href="index.html">VibeSpace</a>
+      <p class="eyebrow">Personal Soundspace</p>
+      <h1>登入你的 VibeSpace</h1>
+      <p class="subtle">登入後可保存每次使用時間、模式與環境音量紀錄。</p>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab is-active" data-mode="login">登入</button>
+        <button type="button" class="tab" data-mode="signup">註冊</button>
+      </div>
+
+      <form id="accountForm" class="account-form">
+        <label id="nameField" class="field is-hidden">
+          <span>顯示名稱</span>
+          <input id="displayName" type="text" autocomplete="name" maxlength="50" />
+        </label>
+
+        <label class="field">
+          <span>Email</span>
+          <input id="email" type="email" autocomplete="email" required />
+        </label>
+
+        <label class="field">
+          <span>密碼</span>
+          <input id="password" type="password" autocomplete="current-password" minlength="6" required />
+        </label>
+
+        <button id="submitBtn" class="primary" type="submit">登入</button>
+        <p id="message" class="message" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/login.js"></script>
+</body>
+</html>
