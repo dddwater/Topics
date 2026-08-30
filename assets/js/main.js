@@ -1,5 +1,5 @@
 // Web Audio engine — mic analysis feeds the vibespace context-engine state
-// machine (assets/js/context-engine.js), which drives a crossfading track
+// machine (assets/js/context-engine.js), which drives a single-track
 // player (assets/js/soundscape-player.js) instead of the previous raw
 // oscillator tone. Ported from emma63194/vibespace (app/page.tsx cockpit).
 (() => {
@@ -64,8 +64,15 @@
   }
 
   function handleTrackCycleComplete(event) {
-    if (event.energy !== currentDecisionEnergy()) return;
-    selectRandomTrack(event.energy, "cycle-complete");
+    if (!player
+      || event.energy !== player.activeEnergy
+      || event.trackIndex !== player.activeTrackIndex) return;
+
+    const nextEnergy = currentDecisionEnergy();
+    const reason = nextEnergy === event.energy
+      ? "cycle-complete"
+      : "environment-change-after-cycle";
+    selectRandomTrack(nextEnergy, reason);
   }
 
   function loadSavedSettings() {
@@ -98,7 +105,6 @@
   }
 
   function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
-    const previousEnergy = currentDecisionEnergy();
     const decision = decideContext({
       shortTermDbRel,
       longTermDbRel,
@@ -117,13 +123,8 @@
       currentState = decision.state;
     }
     currentGainDb = decision.targetGainDb;
-    const stableEnergy = currentDecisionEnergy();
-
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
-      if (stableEnergy !== previousEnergy || player.activeEnergy !== stableEnergy) {
-        selectRandomTrack(stableEnergy, "environment-change");
-      }
     }
 
     onDecision?.(decision, { longTermDbRel, shortTermDbRel });
@@ -396,3 +397,4 @@
   }
   reset();
 })();
+

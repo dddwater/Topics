@@ -1,4 +1,4 @@
-// Crossfading soundscape player, ported from emma63194/vibespace
+// Single-track soundscape player, ported from emma63194/vibespace
 // (lib/soundscape-player.ts) into a vanilla JS class.
 (() => {
   "use strict";
@@ -166,42 +166,24 @@
       this.master.gain.exponentialRampToValueAtTime(this.toDemoGain(gainDb), now + rampSeconds);
     }
 
-    setTrack(energy, trackIndex = 0, crossfadeSeconds = 3.4) {
+    setTrack(energy, trackIndex = 0) {
       if (!this.context || !this.master || !this.active) return;
       if (this.activeEnergy === energy && this.activeTrackIndex === trackIndex) return;
 
       const previous = this.active;
-      const previousEnergy = this.activeEnergy;
-      const previousTrackIndex = this.activeTrackIndex;
-      const next = this.createScene(energy, trackIndex, 0);
+      const next = this.createScene(energy, trackIndex, 1);
+      this.active = next;
       this.activeEnergy = energy;
       this.activeTrackIndex = trackIndex;
+      this.stopScene(previous);
 
-      void next.audio.play().then(() => {
-        if (!this.context || this.destroyed) {
+      void next.audio.play().catch(() => {
+        if (this.active === next) {
           this.stopScene(next);
-          return;
+          this.active = null;
+          this.activeEnergy = null;
+          this.activeTrackIndex = 0;
         }
-        const now = this.context.currentTime;
-        const steps = 64;
-        const fadeOut = new Float32Array(steps);
-        const fadeIn = new Float32Array(steps);
-        for (let index = 0; index < steps; index += 1) {
-          const progress = index / (steps - 1);
-          fadeOut[index] = Math.sqrt(1 - progress);
-          fadeIn[index] = Math.sqrt(progress);
-        }
-
-        previous.gain.gain.cancelScheduledValues(now);
-        next.gain.gain.cancelScheduledValues(now);
-        previous.gain.gain.setValueCurveAtTime(fadeOut, now, crossfadeSeconds);
-        next.gain.gain.setValueCurveAtTime(fadeIn, now, crossfadeSeconds);
-        previous.stopTimer = window.setTimeout(() => this.stopScene(previous), (crossfadeSeconds + 0.2) * 1000);
-        this.active = next;
-      }).catch(() => {
-        this.stopScene(next);
-        this.activeEnergy = previousEnergy;
-        this.activeTrackIndex = previousTrackIndex;
       });
     }
 
@@ -257,7 +239,6 @@
     }
 
     stopScene(scene) {
-      if (scene.stopTimer) window.clearTimeout(scene.stopTimer);
       scene.audio.removeEventListener("ended", scene.onEnded);
       scene.audio.pause();
       scene.source.disconnect();
@@ -271,3 +252,4 @@
 
   window.VibeSpaceSoundscape = { SoundscapePlayer, getSoundscapeMeta, getSoundscapeTrackCount };
 })();
+
