@@ -5,6 +5,7 @@
 (() => {
   const { decideContext, DEFAULT_CALIBRATION } = window.VibeSpaceContextEngine;
   const { SoundscapePlayer, getSoundscapeMeta, getSoundscapeTrackCount } = window.VibeSpaceSoundscape;
+  const { NonRepeatingTrackSelector } = window.VibeSpaceTrackSelection;
 
   const STORAGE_KEY = "vibespace.spaceSettings";
   const DEFAULT_PROFILE = {
@@ -38,7 +39,9 @@
   let animationFrameId = null;
   let onLevel = null;
   let onDecision = null;
+  let onTrackChange = null;
   let player = null;
+  const trackSelector = new NonRepeatingTrackSelector(getSoundscapeTrackCount, { historySize: 2 });
 
   let activeProfile = DEFAULT_PROFILE;
   let settingsSource = "automatic";
@@ -49,7 +52,21 @@
   let currentGainDb = DEFAULT_CALIBRATION.preferredGainDb;
   let startedAt = 0;
   let smoothedLongTermDb = DEFAULT_CALIBRATION.normalBaselineDbRel;
-  let trackIndexes = { low: 0, medium: 0, high: 0 };
+  let trackIndexes = { low: null, medium: null, high: null };
+
+  function selectRandomTrack(energy, reason) {
+    const nextIndex = trackSelector.next(energy, trackIndexes[energy]);
+    trackIndexes = { ...trackIndexes, [energy]: nextIndex };
+    const meta = getSoundscapeMeta(energy, nextIndex);
+    if (player?.active) player.setTrack(energy, nextIndex);
+    onTrackChange?.(meta, { energy, trackIndex: nextIndex, reason });
+    return meta;
+  }
+
+  function handleTrackCycleComplete(event) {
+    if (event.energy !== currentDecisionEnergy()) return;
+    selectRandomTrack(event.energy, "cycle-complete");
+  }
 
   function loadSavedSettings() {
     try {
@@ -81,6 +98,7 @@
   }
 
   function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
+    const previousEnergy = currentDecisionEnergy();
     const decision = decideContext({
       shortTermDbRel,
       longTermDbRel,
@@ -99,10 +117,13 @@
       currentState = decision.state;
     }
     currentGainDb = decision.targetGainDb;
+    const stableEnergy = currentDecisionEnergy();
 
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
-      player.setTrack(decision.energy, trackIndexes[decision.energy]);
+      if (stableEnergy !== previousEnergy || player.activeEnergy !== stableEnergy) {
+        selectRandomTrack(stableEnergy, "environment-change");
+      }
     }
 
     onDecision?.(decision, { longTermDbRel, shortTermDbRel });
@@ -132,10 +153,7 @@
 
   function skipTrack() {
     const energy = currentDecisionEnergy();
-    const nextIndex = (trackIndexes[energy] + 1) % getSoundscapeTrackCount(energy);
-    trackIndexes = { ...trackIndexes, [energy]: nextIndex };
-    if (player) player.setTrack(energy, nextIndex);
-    return getSoundscapeMeta(energy, nextIndex);
+    return selectRandomTrack(energy, "manual-skip");
   }
 
   function currentDecisionEnergy() {
@@ -152,6 +170,7 @@
 
     onLevel = options.onLevel;
     onDecision = options.onDecision;
+    onTrackChange = options.onTrackChange;
 
     const configuration = getConfiguration();
     activeProfile = configuration.profile;
@@ -161,7 +180,8 @@
     currentState = "social";
     currentGainDb = calibration.preferredGainDb;
     smoothedLongTermDb = calibration.normalBaselineDbRel;
-    trackIndexes = { low: 0, medium: 0, high: 0 };
+    trackIndexes = { low: null, medium: null, high: null };
+    trackSelector.reset();
 
     microphoneStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
@@ -172,8 +192,18 @@
     microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
     microphoneSource.connect(analyser);
 
-    player ||= new SoundscapePlayer();
-    await player.play("medium", currentGainDb, trackIndexes.medium);
+    player ||= new SoundscapePlayer({ onTrackCycleComplete: handleTrackCycleComplete });
+    player.onTrackCycleComplete = handleTrackCycleComplete;
+    const initialIndex = trackSelector.next("medium", null);
+    trackIndexes.medium = initialIndex;
+    await player.play("medium", currentGainDb, initialIndex);
+    onTrackChange?.(getSoundscapeMeta("medium", initialIndex), {
+      energy: "medium",
+      trackIndex: initialIndex,
+      reason: "start",
+    });
+
+    void window.VibeSpaceFreesound?.refreshAll?.().catch(() => undefined);
 
     startedAt = Date.now();
     measure();
@@ -190,9 +220,11 @@
     if (audioContext && audioContext.state !== "closed") await audioContext.close();
     audioContext = null;
     analyser = null;
-    await player?.pause();
+    await player?.destroy();
+    player = null;
     onLevel = null;
     onDecision = null;
+    onTrackChange = null;
   }
 
   function setOperationMode(mode) {
@@ -206,10 +238,15 @@
     }
   }
 
-  window.VibeAudioEngine = { start, stop, getConfiguration, skipTrack, setOperationMode };
+  function getCurrentTrack() {
+    const energy = currentDecisionEnergy();
+    const index = trackIndexes[energy];
+    return index == null ? null : getSoundscapeMeta(energy, index);
+  }
+
+  window.VibeAudioEngine = { start, stop, getConfiguration, getCurrentTrack, skipTrack, setOperationMode };
   window.addEventListener("pagehide", () => {
-    stop();
-    void player?.destroy();
+    void stop();
   });
 })();
 
@@ -259,11 +296,10 @@
   function renderDecision(decision) {
     if (!decision) return;
     status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}`;
-    if (trackLabel) {
-      const energy = decision.energy;
-      const meta = window.VibeSpaceSoundscape.getSoundscapeMeta(energy, 0);
-      trackLabel.textContent = `${meta.title} · ${meta.subtitle} · ${decision.targetGainDb.toFixed(1)} dB`;
-    }
+  }
+
+  function renderTrack(meta) {
+    if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
   }
 
   function setActiveMode(mode) {
@@ -298,6 +334,7 @@
         const engineState = await window.VibeAudioEngine.start({
           onLevel: render,
           onDecision: renderDecision,
+          onTrackChange: renderTrack,
         });
         setActiveMode(engineState.operationMode);
         status.textContent = engineState.source === "manual"
