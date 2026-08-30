@@ -21,6 +21,8 @@
       <a href="settings.html">空間設定</a>
       <a href="insights.html">品牌聲景</a>
       <a href="pricing.html">方案與定價</a>
+      <a href="history.html">我的紀錄</a>
+      <button id="logoutBtn" type="button" style="border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;">登出</button>
     </div>
   </nav>
 
@@ -38,18 +40,9 @@
     </button>
 
     <div class="vibe-meter" aria-hidden="true">
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span>
+      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
+      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
+      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
     </div>
 
     <p class="vibe-status" id="vibeStatus">尚未啟動</p>
@@ -67,10 +60,21 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    window.VibeSpaceAuth.requireUser();
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await window.VibeSpaceAuth.signOut();
+      window.location.href = "login.html";
+    });
+  </script>
   <script src="assets/js/context-engine.js"></script>
   <script src="assets/js/soundscape-player.js"></script>
   <script src="assets/js/track-selector.js"></script>
   <script src="assets/js/freesound-candidates.js"></script>
   <script src="assets/js/main.js?v=vibespace-core-port"></script>
+  <script src="assets/js/session-recorder.js"></script>
 </body>
 </html>
