@@ -49,18 +49,32 @@
   let calibration = DEFAULT_CALIBRATION;
 
   let currentState = "social";
+  let latestDecisionEnergy = "medium";
   let currentGainDb = DEFAULT_CALIBRATION.preferredGainDb;
   let startedAt = 0;
   let smoothedLongTermDb = DEFAULT_CALIBRATION.normalBaselineDbRel;
   let trackIndexes = { low: null, medium: null, high: null };
 
-  function selectRandomTrack(energy, reason) {
+  async function selectRandomTrack(energy, reason) {
     const nextIndex = trackSelector.next(energy, trackIndexes[energy]);
+    const meta = player?.active
+      ? await player.setTrack(energy, nextIndex)
+      : getSoundscapeMeta(energy, nextIndex);
+    if (!meta) return null;
     trackIndexes = { ...trackIndexes, [energy]: nextIndex };
-    const meta = getSoundscapeMeta(energy, nextIndex);
-    if (player?.active) player.setTrack(energy, nextIndex);
     onTrackChange?.(meta, { energy, trackIndex: nextIndex, reason });
     return meta;
+  }
+
+  function handleTrackEnded(event) {
+    if (!player
+      || operationMode === "manual"
+      || event.energy !== player.activeEnergy
+      || event.trackIndex !== player.activeTrackIndex
+      || latestDecisionEnergy === event.energy) return false;
+
+    void selectRandomTrack(latestDecisionEnergy, "environment-change-after-track");
+    return true;
   }
 
   function handleTrackCycleComplete(event) {
@@ -68,11 +82,11 @@
       || event.energy !== player.activeEnergy
       || event.trackIndex !== player.activeTrackIndex) return;
 
-    const nextEnergy = currentDecisionEnergy();
+    const nextEnergy = latestDecisionEnergy;
     const reason = nextEnergy === event.energy
       ? "cycle-complete"
       : "environment-change-after-cycle";
-    selectRandomTrack(nextEnergy, reason);
+    void selectRandomTrack(nextEnergy, reason);
   }
 
   function loadSavedSettings() {
@@ -122,6 +136,7 @@
     if (decision.state !== "transient" && decision.state !== "uncertain") {
       currentState = decision.state;
     }
+    latestDecisionEnergy = decision.energy;
     currentGainDb = decision.targetGainDb;
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
@@ -153,14 +168,8 @@
   }
 
   function skipTrack() {
-    const energy = currentDecisionEnergy();
+    const energy = latestDecisionEnergy;
     return selectRandomTrack(energy, "manual-skip");
-  }
-
-  function currentDecisionEnergy() {
-    if (currentState === "quiet") return "low";
-    if (currentState === "busy") return "high";
-    return "medium";
   }
 
   async function start(options = {}) {
@@ -179,6 +188,7 @@
     operationMode = configuration.operationMode;
     calibration = configuration.calibration;
     currentState = "social";
+    latestDecisionEnergy = "medium";
     currentGainDb = calibration.preferredGainDb;
     smoothedLongTermDb = calibration.normalBaselineDbRel;
     trackIndexes = { low: null, medium: null, high: null };
@@ -193,7 +203,11 @@
     microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
     microphoneSource.connect(analyser);
 
-    player ||= new SoundscapePlayer({ onTrackCycleComplete: handleTrackCycleComplete });
+    player ||= new SoundscapePlayer({
+      onTrackEnded: handleTrackEnded,
+      onTrackCycleComplete: handleTrackCycleComplete,
+    });
+    player.onTrackEnded = handleTrackEnded;
     player.onTrackCycleComplete = handleTrackCycleComplete;
     const initialIndex = trackSelector.next("medium", null);
     trackIndexes.medium = initialIndex;
@@ -240,9 +254,7 @@
   }
 
   function getCurrentTrack() {
-    const energy = currentDecisionEnergy();
-    const index = trackIndexes[energy];
-    return index == null ? null : getSoundscapeMeta(energy, index);
+    return player?.active?.meta || null;
   }
 
   window.VibeAudioEngine = { start, stop, getConfiguration, getCurrentTrack, skipTrack, setOperationMode };
@@ -384,9 +396,9 @@
     });
   });
 
-  skipButton?.addEventListener("click", () => {
+  skipButton?.addEventListener("click", async () => {
     if (!active) return;
-    const meta = window.VibeAudioEngine?.skipTrack?.();
+    const meta = await window.VibeAudioEngine?.skipTrack?.();
     if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
   });
 
