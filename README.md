@@ -28,7 +28,7 @@ window.VIBESPACE_FREESOUND_API_KEY = "YOUR_LOCAL_TEST_TOKEN";
 2. 網頁請求麥克風權限。
 3. 主畫面顯示具有動態效果的 Vibe UI。
 4. 網頁即時分析麥克風接收到的環境音量。
-5. 系統根據噪音與空間設定，自動調整環境音樂。
+5. 系統根據環境噪音自動調整音樂分類與音量。
 
 ## 團隊分工
 
@@ -53,34 +53,7 @@ window.VIBESPACE_FREESOUND_API_KEY = "YOUR_LOCAL_TEST_TOKEN";
 - 視覺方向可包含毛玻璃、隨機漸層、呼吸燈與聲音反應動畫。
 - 主要交付：`index.html` 與相關樣式、互動檔案。
 
-### 4. 營建管理（水電）：空間參數設定頁
-
-- 負責 `settings.html`。
-- 將營建與空間知識轉換為後端及混音引擎可以使用的選項。
-- 設定項目：
-  - 空間坪數：小型／中型／大型。
-  - 使用環境：餐廳／辦公室／咖啡廳／教室或會議室。
-  - 空間類別：開放／半開放／封閉。
-- 使用者儲存設定後，播放器會優先使用手動聲學模式；天花板、空調與混音參數由系統推導。
-- 主要交付：設定頁的 HTML、CSS、JavaScript，以及明確的設定資料格式。
-
-建議設定資料格式：
-
-```json
-{
-  "version": 2,
-  "source": "manual",
-  "spaceSize": "medium",
-  "environment": "office",
-  "spaceType": "enclosed",
-  "acousticProfile": {
-    "id": "near-field",
-    "name": "近場清晰"
-  }
-}
-```
-
-### 5. 會計系：ROI 試算與定價頁
+### 4. 會計系：ROI 試算與定價頁
 
 - 負責 `pricing.html`。
 - 讓企業輸入員工月薪與員工人數。
@@ -93,7 +66,6 @@ window.VIBESPACE_FREESOUND_API_KEY = "YOUR_LOCAL_TEST_TOKEN";
 ```text
 Topics/
 ├── index.html
-├── settings.html
 ├── pricing.html
 ├── assets/
 │   ├── audio/
@@ -141,8 +113,9 @@ main
 
 ## 整合原則
 
-- 頁面之間使用相對路徑，例如 `settings.html` 與 `pricing.html`。
+- 頁面之間使用相對路徑，例如 `pricing.html` 與 `history.html`。
 - JavaScript 模組應清楚說明輸入、輸出與事件名稱。
 - 前後端交換資料時統一使用 JSON。
 - 不提交密碼、API key、麥克風錄音或個人資料。
 - 合併前至少在桌面與行動裝置尺寸各測試一次。
+
