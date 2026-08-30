@@ -9,9 +9,26 @@
   <link rel="stylesheet" href="assets/css/account.css" />
 </head>
 <body>
+  <div class="vibe-bg" aria-hidden="true">
+    <div class="vibe-glow vibe-glow--a"></div>
+    <div class="vibe-glow vibe-glow--b"></div>
+    <div class="vibe-glow vibe-glow--c"></div>
+  </div>
+  <div class="vibe-vignette" aria-hidden="true"></div>
+  <div class="vibe-grain" aria-hidden="true"></div>
+
+  <nav class="account-nav" aria-label="品牌導覽">
+    <a class="account-nav__brand" href="index.html">VibeSpace</a>
+    <span>Smart Ambient Sound</span>
+  </nav>
+
   <main class="account-shell">
     <section class="account-card">
-      <a class="brand" href="index.html">VibeSpace</a>
+      <div class="account-mark" aria-hidden="true">
+        <span class="account-mark__ring account-mark__ring--outer"></span>
+        <span class="account-mark__ring account-mark__ring--inner"></span>
+        <span class="account-mark__core"></span>
+      </div>
       <p class="eyebrow">Personal Soundspace</p>
       <h1>登入你的 VibeSpace</h1>
       <p class="subtle">登入後可保存每次使用時間、模式與環境音量紀錄。</p>
@@ -49,3 +66,4 @@
   <script src="assets/js/login.js"></script>
 </body>
 </html>
+
