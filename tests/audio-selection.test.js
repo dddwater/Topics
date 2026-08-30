@@ -31,12 +31,19 @@ async function testSelector() {
 }
 
 async function testLibraryAndLoopCount() {
+  const audioInstances = [];
   class MockAudio {
-    constructor(src) { this.src = src; this.listeners = {}; this.playCount = 0; }
+    constructor(src) {
+      this.src = src;
+      this.listeners = {};
+      this.playCount = 0;
+      this.paused = true;
+      audioInstances.push(this);
+    }
     addEventListener(name, callback) { this.listeners[name] = callback; }
     removeEventListener(name) { delete this.listeners[name]; }
-    play() { this.playCount += 1; return Promise.resolve(); }
-    pause() {}
+    play() { this.playCount += 1; this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
   }
   const node = () => ({
     gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, setValueCurveAtTime() {} },
@@ -80,6 +87,20 @@ async function testLibraryAndLoopCount() {
   threeLoopPlayer.active.audio.listeners.ended();
   assert.equal(completed.loops, 3);
   await threeLoopPlayer.destroy();
+
+  const singleTrackPlayer = new api.SoundscapePlayer({ random: () => 0 });
+  await singleTrackPlayer.play("medium", -24, 0);
+  singleTrackPlayer.setTrack("medium", 1);
+  singleTrackPlayer.setTrack("high", 2);
+  await Promise.resolve();
+  assert.equal(singleTrackPlayer.activeEnergy, "high");
+  assert.equal(singleTrackPlayer.activeTrackIndex, 2);
+  assert.equal(
+    audioInstances.filter((audio) => !audio.paused).length,
+    1,
+    "rapid track changes must leave exactly one audio element playing",
+  );
+  await singleTrackPlayer.destroy();
 }
 
 async function testFreesoundFiltersAndSnapshot() {
@@ -131,3 +152,4 @@ async function testFreesoundFiltersAndSnapshot() {
   console.error(error);
   process.exitCode = 1;
 });
+
