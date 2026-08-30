@@ -90,9 +90,8 @@ async function testLibraryAndLoopCount() {
 
   const singleTrackPlayer = new api.SoundscapePlayer({ random: () => 0 });
   await singleTrackPlayer.play("medium", -24, 0);
-  singleTrackPlayer.setTrack("medium", 1);
-  singleTrackPlayer.setTrack("high", 2);
-  await Promise.resolve();
+  await singleTrackPlayer.setTrack("medium", 1);
+  await singleTrackPlayer.setTrack("high", 2);
   assert.equal(singleTrackPlayer.activeEnergy, "high");
   assert.equal(singleTrackPlayer.activeTrackIndex, 2);
   assert.equal(
@@ -101,6 +100,24 @@ async function testLibraryAndLoopCount() {
     "rapid track changes must leave exactly one audio element playing",
   );
   await singleTrackPlayer.destroy();
+
+  let categoryChanged = false;
+  let boundaryEvent = null;
+  const boundaryPlayer = new api.SoundscapePlayer({
+    random: () => 0.999,
+    onTrackEnded: (event) => {
+      boundaryEvent = event;
+      if (event.energy !== "medium") return false;
+      categoryChanged = true;
+      return true;
+    },
+  });
+  await boundaryPlayer.play("medium", -24, 0);
+  boundaryPlayer.active.audio.listeners.ended();
+  assert.equal(categoryChanged, true, "environment change must be handled after the current play ends");
+  assert.equal(boundaryEvent.loops, 1);
+  assert.equal(boundaryPlayer.active.audio.playCount, 1, "old category must not start another loop");
+  await boundaryPlayer.destroy();
 }
 
 async function testFreesoundFiltersAndSnapshot() {
@@ -152,4 +169,5 @@ async function testFreesoundFiltersAndSnapshot() {
   console.error(error);
   process.exitCode = 1;
 });
+
 
