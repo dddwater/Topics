@@ -1,0 +1,21 @@
+:root { color-scheme: dark; font-family: Inter, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 20% 10%, #20463f 0, transparent 30%), #0d1117; color: #f4f5f2; }
+.account-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.account-card { width: min(460px, 100%); padding: 32px; border: 1px solid rgba(255,255,255,.12); border-radius: 20px; background: rgba(19,26,32,.88); box-shadow: 0 24px 70px rgba(0,0,0,.35); backdrop-filter: blur(14px); }
+.brand { color: #8be0c7; text-decoration: none; font-weight: 800; letter-spacing: .04em; }
+.eyebrow { margin: 24px 0 8px; color: #8be0c7; font-size: .78rem; text-transform: uppercase; letter-spacing: .12em; }
+h1 { margin: 0 0 10px; font-size: clamp(1.7rem, 5vw, 2.3rem); }
+.subtle { color: #aeb8bd; line-height: 1.6; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 26px 0 18px; padding: 5px; border-radius: 12px; background: #11171c; }
+.tab { border: 0; border-radius: 9px; padding: 10px; background: transparent; color: #98a4aa; cursor: pointer; }
+.tab.is-active { background: #24312f; color: #dcfff5; }
+.account-form, .field { display: grid; gap: 10px; }
+.account-form { gap: 16px; }
+.field span { color: #cad2d5; font-size: .9rem; }
+input { width: 100%; border: 1px solid #344047; border-radius: 10px; padding: 12px 13px; background: #0d1317; color: white; outline: none; }
+input:focus { border-color: #65cdb0; box-shadow: 0 0 0 3px rgba(101,205,176,.14); }
+.primary { border: 0; border-radius: 10px; padding: 13px 16px; background: #56b99e; color: #07100d; font-weight: 800; cursor: pointer; }
+.primary:disabled { opacity: .6; cursor: wait; }
+.message { min-height: 1.4em; margin: 0; color: #cbd4d7; line-height: 1.5; }
+.is-hidden { display: none; }

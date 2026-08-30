@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeSpace 使用紀錄</title>
+  <link rel="stylesheet" href="assets/css/account.css" />
+  <style>
+    .history-card{width:min(860px,100%)} .history-head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+    .history-actions{display:flex;gap:10px}.ghost{border:1px solid #344047;border-radius:10px;padding:10px 13px;background:transparent;color:#e9efef;text-decoration:none;cursor:pointer}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.stat{padding:16px;border-radius:14px;background:#11171c}.stat strong{display:block;font-size:1.4rem;margin-top:6px}.records{display:grid;gap:10px}.record{padding:16px;border:1px solid #2a353b;border-radius:14px;background:#11171c}.record-top{display:flex;justify-content:space-between;gap:12px}.record small{color:#9eaaaf}.empty{color:#aeb8bd;padding:24px 0}@media(max-width:650px){.stats{grid-template-columns:1fr}.record-top{display:block}}
+  </style>
+</head>
+<body>
+  <main class="account-shell">
+    <section class="account-card history-card">
+      <div class="history-head">
+        <div>
+          <a class="brand" href="index.html">VibeSpace</a>
+          <p class="eyebrow">Usage History</p>
+          <h1>我的使用紀錄</h1>
+          <p id="userLabel" class="subtle">讀取帳號中…</p>
+        </div>
+        <div class="history-actions">
+          <a class="ghost" href="index.html">返回主畫面</a>
+          <button id="logoutBtn" class="ghost" type="button">登出</button>
+        </div>
+      </div>
+
+      <section class="stats" aria-label="使用統計">
+        <div class="stat"><small>總使用次數</small><strong id="totalSessions">—</strong></div>
+        <div class="stat"><small>總使用時間</small><strong id="totalDuration">—</strong></div>
+        <div class="stat"><small>最常使用模式</small><strong id="favoriteMode">—</strong></div>
+      </section>
+
+      <div id="records" class="records"><p class="empty">載入中…</p></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/history.js"></script>
+</body>
+</html>
