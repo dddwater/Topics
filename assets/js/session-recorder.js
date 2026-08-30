@@ -39,18 +39,13 @@
     }
   }
 
-  toggle.addEventListener("click", () => {
-    const wasActive = toggle.getAttribute("aria-pressed") === "true";
+  window.addEventListener("vibespace:session-start", async () => {
+    const user = await refreshIdentity();
+    if (user) sessionStartedAt = new Date();
+  });
 
-    setTimeout(async () => {
-      const isActive = toggle.getAttribute("aria-pressed") === "true";
-      if (!wasActive && isActive) {
-        const user = await refreshIdentity();
-        if (user) sessionStartedAt = new Date();
-      } else if (wasActive && !isActive) {
-        await saveSession();
-      }
-    }, 250);
+  window.addEventListener("vibespace:session-stop", async () => {
+    await saveSession();
   });
 
   document.querySelectorAll("[data-vibe-mode]").forEach((button) => {
@@ -61,3 +56,4 @@
 
   refreshIdentity().catch((error) => console.warn(error));
 })();
+
