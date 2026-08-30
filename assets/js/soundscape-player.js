@@ -123,6 +123,8 @@
       this.activeEnergy = null;
       this.activeTrackIndex = 0;
       this.destroyed = false;
+      this.trackRequestId = 0;
+      this.onTrackEnded = options.onTrackEnded || null;
       this.onTrackCycleComplete = options.onTrackCycleComplete || null;
       this.random = options.random || Math.random;
     }
@@ -166,29 +168,37 @@
       this.master.gain.exponentialRampToValueAtTime(this.toDemoGain(gainDb), now + rampSeconds);
     }
 
-    setTrack(energy, trackIndex = 0) {
-      if (!this.context || !this.master || !this.active) return;
-      if (this.activeEnergy === energy && this.activeTrackIndex === trackIndex) return;
+    async setTrack(energy, trackIndex = 0) {
+      if (!this.context || !this.master || !this.active) return null;
+      if (this.activeEnergy === energy && this.activeTrackIndex === trackIndex) {
+        return this.active.meta;
+      }
 
       const previous = this.active;
       const next = this.createScene(energy, trackIndex, 1);
+      const requestId = ++this.trackRequestId;
+      try {
+        await next.audio.play();
+      } catch (error) {
+        this.stopScene(next);
+        return null;
+      }
+
+      if (this.destroyed || requestId !== this.trackRequestId) {
+        this.stopScene(next);
+        return null;
+      }
+
       this.active = next;
       this.activeEnergy = energy;
       this.activeTrackIndex = trackIndex;
       this.stopScene(previous);
-
-      void next.audio.play().catch(() => {
-        if (this.active === next) {
-          this.stopScene(next);
-          this.active = null;
-          this.activeEnergy = null;
-          this.activeTrackIndex = 0;
-        }
-      });
+      return next.meta;
     }
 
     async destroy() {
       this.destroyed = true;
+      this.trackRequestId += 1;
       if (this.active) this.stopScene(this.active);
       this.active = null;
       this.activeEnergy = null;
@@ -222,6 +232,14 @@
       scene.onEnded = () => {
         if (this.destroyed || this.active !== scene) return;
         scene.loopsPlayed += 1;
+        const changingCategory = this.onTrackEnded?.({
+          energy: scene.energy,
+          trackIndex: scene.trackIndex,
+          meta: scene.meta,
+          loops: scene.loopsPlayed,
+          loopGoal: scene.loopGoal,
+        }) === true;
+        if (changingCategory) return;
         if (scene.loopsPlayed < scene.loopGoal) {
           scene.audio.currentTime = 0;
           void scene.audio.play().catch(() => undefined);
@@ -252,4 +270,5 @@
 
   window.VibeSpaceSoundscape = { SoundscapePlayer, getSoundscapeMeta, getSoundscapeTrackCount };
 })();
+
 
