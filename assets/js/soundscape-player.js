@@ -6,30 +6,66 @@
   const TRACKS = {
     low: [
       {
-        title: "Calm Sketch for Piano",
-        artist: "Kevin MacLeod",
-        subtitle: "Quiet · 原聲鋼琴",
-        src: "assets/audio/calm-sketch-for-piano.mp3",
-      },
-      {
         title: "Chill Air",
         artist: "Frank Nora",
         subtitle: "Quiet · Ambient chill",
         src: "assets/audio/chill-air.mp3",
       },
-    ],
-    medium: [
-      {
-        title: "Chill Beat",
-        artist: "Frank Nora",
-        subtitle: "Social · Chill beat",
-        src: "assets/audio/chill-beat.mp3",
-      },
       {
         title: "Meditating Beat",
         artist: "Kevin MacLeod",
-        subtitle: "Social · Relaxed groove",
+        subtitle: "Quiet · Relaxed groove",
         src: "assets/audio/meditating-beat.mp3",
+      },
+      {
+        title: "Chill Lofi Inspired",
+        artist: "omfgdude",
+        subtitle: "Quiet · Lofi piano",
+        src: "assets/audio/chill-lofi-inspired.mp3",
+      },
+      {
+        title: "Forget Me Not (Looped)",
+        artist: "Kistol",
+        subtitle: "Quiet · Gentle piano",
+        src: "assets/audio/forget-me-not-looped.ogg",
+      },
+      {
+        title: "Lofi Hip Hop Loop",
+        artist: "omfgdude / OMF-Games",
+        subtitle: "Quiet · Lofi hip-hop",
+        src: "assets/audio/lofi-hip-hop-loop.ogg",
+      },
+    ],
+    medium: [
+      {
+        title: "Hot Springs Town",
+        artist: "Kistol",
+        subtitle: "Social · Japanese cozy",
+        src: "assets/audio/hot-springs-town.mp3",
+      },
+      {
+        title: "Wednesday Night",
+        artist: "Zane Little Music",
+        subtitle: "Social · Chill funk fusion",
+        src: "assets/audio/wednesday-night.mp3",
+      },
+      {
+        title: "Lofi Hip Hop",
+        artist: "omfgdude",
+        subtitle: "Social · Relaxed beats",
+        src: "assets/audio/lofi-hip-hop.ogg",
+      },
+      {
+        title: "Cat Caffe",
+        artist: "TAD",
+        subtitle: "Social · Cozy lofi",
+        src: "assets/audio/cat-caffe.mp3",
+      },
+      {
+        title: "Calm Loop",
+        artist: "wipics",
+        subtitle: "Social · Ambient percussion",
+        src: "assets/audio/calm-loop.mp3",
       },
     ],
     high: [
@@ -40,10 +76,28 @@
         src: "assets/audio/backbeat.mp3",
       },
       {
-        title: "Beat One",
-        artist: "Kevin MacLeod",
-        subtitle: "Busy · Driving beat",
-        src: "assets/audio/beat-one.mp3",
+        title: "Funked Up",
+        artist: "Joth",
+        subtitle: "Busy · Funk groove",
+        src: "assets/audio/funked-up.mp3",
+      },
+      {
+        title: "Action Track",
+        artist: "LushoGames",
+        subtitle: "Busy · Funk rock",
+        src: "assets/audio/action-track.mp3",
+      },
+      {
+        title: "Funky Disco Beats",
+        artist: "Fupi",
+        subtitle: "Busy · Disco funk",
+        src: "assets/audio/funky-disco.ogg",
+      },
+      {
+        title: "Fusion Jazz",
+        artist: "Spring Spring",
+        subtitle: "Busy · Jazz fusion",
+        src: "assets/audio/fusion-jazz.ogg",
       },
     ],
   };
@@ -61,7 +115,7 @@
   }
 
   class SoundscapePlayer {
-    constructor() {
+    constructor(options = {}) {
       this.context = null;
       this.master = null;
       this.compressor = null;
@@ -69,6 +123,8 @@
       this.activeEnergy = null;
       this.activeTrackIndex = 0;
       this.destroyed = false;
+      this.onTrackCycleComplete = options.onTrackCycleComplete || null;
+      this.random = options.random || Math.random;
     }
 
     ensureContext() {
@@ -165,17 +221,44 @@
       if (!this.context || !this.master) throw new Error("Audio context is not ready");
       const meta = getSoundscapeMeta(energy, trackIndex);
       const audio = new Audio(meta.src);
-      audio.loop = true;
+      audio.loop = false;
       audio.preload = "auto";
       const source = this.context.createMediaElementSource(audio);
       const gain = this.context.createGain();
       gain.gain.value = initialGain;
       source.connect(gain).connect(this.master);
-      return { audio, source, gain };
+      const scene = {
+        audio,
+        source,
+        gain,
+        energy,
+        trackIndex,
+        meta,
+        loopsPlayed: 0,
+        loopGoal: 2 + Math.floor(this.random() * 2),
+      };
+      scene.onEnded = () => {
+        if (this.destroyed || this.active !== scene) return;
+        scene.loopsPlayed += 1;
+        if (scene.loopsPlayed < scene.loopGoal) {
+          scene.audio.currentTime = 0;
+          void scene.audio.play().catch(() => undefined);
+          return;
+        }
+        this.onTrackCycleComplete?.({
+          energy: scene.energy,
+          trackIndex: scene.trackIndex,
+          meta: scene.meta,
+          loops: scene.loopGoal,
+        });
+      };
+      audio.addEventListener("ended", scene.onEnded);
+      return scene;
     }
 
     stopScene(scene) {
       if (scene.stopTimer) window.clearTimeout(scene.stopTimer);
+      scene.audio.removeEventListener("ended", scene.onEnded);
       scene.audio.pause();
       scene.source.disconnect();
       scene.gain.disconnect();
