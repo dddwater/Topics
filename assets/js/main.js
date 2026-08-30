@@ -344,6 +344,7 @@
       } else {
         startSimulation();
       }
+      window.dispatchEvent(new CustomEvent("vibespace:session-start"));
     } catch (error) {
       active = false;
       toggle.setAttribute("aria-pressed", "false");
@@ -367,6 +368,7 @@
     await window.VibeAudioEngine?.stop?.();
     stopSimulation();
     reset();
+    window.dispatchEvent(new CustomEvent("vibespace:session-stop"));
   }
 
   toggle.addEventListener("click", () => {
@@ -397,4 +399,5 @@
   }
   reset();
 })();
+
 
