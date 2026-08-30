@@ -35,3 +35,17 @@ create policy "Users can delete their own usage records"
   on public.usage_records
   for delete
   using (auth.uid() = user_id);
+
+grant usage on schema public to authenticated;
+
+grant select, insert, delete
+on table public.usage_records
+to authenticated;
+
+grant usage, select
+on sequence public.usage_records_id_seq
+to authenticated;
+
+revoke all
+on table public.usage_records
+from anon;
