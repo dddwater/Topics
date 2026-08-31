@@ -5,28 +5,165 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="assets/images/vibespace-icon.png" />
-  <title>VibeSpace 使用紀錄</title>
-  <link rel="stylesheet" href="assets/css/account.css" />
+  <title>我的紀錄｜VibeSpace</title>
   <style>
-    .history-card{width:min(860px,100%)} .history-head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
-    .history-actions{display:flex;gap:10px}.ghost{border:1px solid #344047;border-radius:10px;padding:10px 13px;background:transparent;color:#e9efef;text-decoration:none;cursor:pointer}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.stat{padding:16px;border-radius:14px;background:#11171c}.stat strong{display:block;font-size:1.4rem;margin-top:6px}.records{display:grid;gap:10px}.record{padding:16px;border:1px solid #2a353b;border-radius:14px;background:#11171c}.record-top{display:flex;justify-content:space-between;gap:12px}.record small{color:#9eaaaf}.empty{color:#aeb8bd;padding:24px 0}@media(max-width:650px){.stats{grid-template-columns:1fr}.record-top{display:block}}
+  :root {
+    --ink: #08090c;
+    --text-primary: rgba(240, 238, 234, 0.94);
+    --text-muted: rgba(240, 238, 234, 0.46);
+    --hairline: rgba(240, 238, 234, 0.1);
+    --glass: rgba(240, 238, 234, 0.035);
+    --glass-card: rgba(18, 20, 28, 0.75);
+    --accent: #d8c3a0;
+    --accent-emerald: #34d399;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scrollbar-gutter: stable; }
+
+  body {
+    background: var(--ink);
+    color: var(--text-primary);
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang TC",
+      "Noto Sans TC", "Helvetica Neue", sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ---------- 背景層 ---------- */
+  .vibe-bg { position: fixed; inset: 0; z-index: -3; overflow: hidden; }
+  .vibe-glow { position: absolute; border-radius: 50%; filter: blur(110px); will-change: transform; animation: drift 40s var(--ease) infinite; }
+  .vibe-glow--a { width: 70vmax; height: 70vmax; top: -28%; left: -18%; background: #2a3550; opacity: 0.5; animation-duration: 44s; }
+  .vibe-glow--b { width: 60vmax; height: 60vmax; bottom: -30%; right: -14%; background: #1e3a38; opacity: 0.42; animation-duration: 52s; animation-delay: -14s; }
+  .vibe-glow--c { width: 44vmax; height: 44vmax; top: 26%; right: 16%; background: #4a3428; opacity: 0.34; animation-duration: 60s; animation-delay: -30s; }
+  @keyframes drift { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(4%, 6%, 0) scale(1.14); } }
+  .vibe-vignette { position: fixed; inset: 0; z-index: -2; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(4, 5, 7, 0.55) 78%, rgba(4, 5, 7, 0.9) 100%); }
+  .vibe-grain { position: fixed; inset: -50%; z-index: -1; pointer-events: none; opacity: 0.16; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E"); animation: grain 700ms steps(1) infinite; }
+  @keyframes grain { 0% { transform: translate(0, 0); } 25% { transform: translate(-2%, 1%); } 50% { transform: translate(1%, -2%); } 75% { transform: translate(-1%, -1%); } 100% { transform: translate(2%, 1%); } }
+
+  /* ---------- 導覽列 ---------- */
+  .vibe-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2.5rem; border-bottom: 1px solid var(--hairline); background: rgba(8, 9, 12, 0.35); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); }
+  .vibe-nav__brand { font-size: 0.78rem; font-weight: 400; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-primary); text-decoration: none; }
+  .vibe-nav__links { display: flex; align-items: center; }
+  .vibe-nav__links a { position: relative; margin-left: 2rem; color: var(--text-muted); font-size: 0.76rem; letter-spacing: 0.14em; text-decoration: none; white-space: nowrap; transition: color 0.5s var(--ease); }
+  .vibe-nav__links a::after { content: ""; position: absolute; left: 0; bottom: -5px; width: 100%; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease); }
+  .vibe-nav__links a:hover, .vibe-nav__links a.active { color: var(--text-primary); }
+  .vibe-nav__links a:hover::after, .vibe-nav__links a.active::after { transform: scaleX(1); }
+  
+  .vibe-nav__logout {
+    margin-left: 2rem;
+    padding: 0.25rem 0.85rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    background: rgba(240, 238, 234, 0.04);
+    border: 1px solid var(--hairline);
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.35s var(--ease);
+  }
+  .vibe-nav__logout:hover {
+    color: var(--accent);
+    border-color: rgba(216, 195, 160, 0.45);
+    background: rgba(216, 195, 160, 0.12);
+    box-shadow: 0 0 12px rgba(216, 195, 160, 0.15);
+  }
+
+  @media (max-width: 640px) { .vibe-nav { padding: 1.15rem 1.5rem; } .vibe-nav__links a { margin-left: 1.25rem; font-size: 0.7rem; } }
+
+  /* ---------- 主面板 ---------- */
+  .container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 6rem 1.25rem 3rem; }
+  
+  .history-card {
+    background: var(--glass-card);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 2.25rem;
+    margin-top: 2rem;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: inset 0 1px 24px rgba(240, 238, 234, 0.03), 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  .history-head { margin-bottom: 2rem; }
+  .eyebrow { margin: 0 0 0.4rem; color: var(--accent); font-size: 0.66rem; font-weight: 400; letter-spacing: 0.42em; text-transform: uppercase; opacity: 0.75; }
+  .history-head h1 { font-size: clamp(1.3rem, 5.2vw, 2.5rem); font-weight: 200; letter-spacing: 0.06em; line-height: 1.25; margin-bottom: 0.35rem; }
+  .subtle { font-size: 0.88rem; color: var(--text-muted); letter-spacing: 0.06em; }
+
+  /* 統計資訊卡片 (香檳金質感) */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin: 2rem 0; }
+  .stat {
+    padding: 1.35rem 1.25rem;
+    border-radius: 14px;
+    background: rgba(8, 9, 12, 0.5);
+    border: 1px solid var(--hairline);
+    transition: all 0.3s var(--ease);
+  }
+  .stat:hover {
+    border-color: rgba(216, 195, 160, 0.35);
+    background: rgba(216, 195, 160, 0.04);
+  }
+  .stat small { display: block; font-size: 0.85rem; color: var(--text-muted); letter-spacing: 0.06em; }
+  .stat strong { display: block; font-size: 1.8rem; font-weight: 300; color: var(--accent); margin-top: 0.35rem; letter-spacing: 0.04em; }
+
+  /* 歷史條目 */
+  .records { display: grid; gap: 0.85rem; }
+  .record {
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    background: rgba(8, 9, 12, 0.5);
+    transition: all 0.3s var(--ease);
+  }
+  .record:hover {
+    border-color: rgba(216, 195, 160, 0.35);
+    background: rgba(216, 195, 160, 0.04);
+    transform: translateY(-1px);
+  }
+  .record-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .record-top strong { font-size: 0.95rem; font-weight: 400; color: var(--text-primary); letter-spacing: 0.04em; }
+  .record small { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem; display: block; letter-spacing: 0.04em; }
+  .empty { color: var(--text-muted); padding: 2rem 0; text-align: center; font-size: 0.9rem; letter-spacing: 0.06em; }
+
+  @media(max-width:650px) {
+    .stats { grid-template-columns: 1fr; }
+    .record-top { display: block; }
+  }
   </style>
 </head>
 <body>
-  <main class="account-shell">
-    <section class="account-card history-card">
+
+  <!-- 背景動畫與光暈 -->
+  <div class="vibe-bg">
+    <div class="vibe-glow vibe-glow--a"></div>
+    <div class="vibe-glow vibe-glow--b"></div>
+    <div class="vibe-glow vibe-glow--c"></div>
+  </div>
+  <div class="vibe-vignette"></div>
+  <div class="vibe-grain"></div>
+
+  <!-- 統一導覽列 -->
+  <header class="vibe-nav">
+    <a href="index.html" class="vibe-nav__brand">VibeSpace</a>
+    <nav class="vibe-nav__links">
+      <a href="insights.html">品牌聲景</a>
+      <a href="pricing.html">方案與定價</a>
+      <a href="history.html" class="active">我的紀錄</a>
+      <button id="logoutBtn" type="button" class="vibe-nav__logout">登出</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="history-card">
       <div class="history-head">
-        <div>
-          <a class="brand" href="index.html">VibeSpace</a>
-          <p class="eyebrow">Usage History</p>
-          <h1>我的使用紀錄</h1>
-          <p id="userLabel" class="subtle">讀取帳號中…</p>
-        </div>
-        <div class="history-actions">
-          <a class="ghost" href="index.html">返回主畫面</a>
-          <button id="logoutBtn" class="ghost" type="button">登出</button>
-        </div>
+        <p class="eyebrow">USAGE HISTORY</p>
+        <h1>我的使用紀錄</h1>
+        <p id="userLabel" class="subtle">讀取帳號中…</p>
       </div>
 
       <section class="stats" aria-label="使用統計">
@@ -42,6 +179,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase-config.js"></script>
   <script src="assets/js/auth.js"></script>
+  <script>
+    if (window.VibeSpaceAuth) {
+      window.VibeSpaceAuth.requireUser();
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          await window.VibeSpaceAuth.signOut();
+          window.location.href = "login.html";
+        });
+      }
+    }
+  </script>
   <script src="assets/js/history.js"></script>
 </body>
 </html>
