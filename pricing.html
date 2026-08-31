@@ -156,6 +156,7 @@
 
   .vibe-nav__links {
     display: flex;
+    align-items: center;
   }
 
   .vibe-nav__links a {
@@ -190,6 +191,27 @@
   .vibe-nav__links a:hover::after,
   .vibe-nav__links a.active::after {
     transform: scaleX(1);
+  }
+
+  .vibe-nav__logout {
+    margin-left: 2rem;
+    padding: 0.25rem 0.85rem;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    letter-spacing: 0.14em;
+    background: rgba(240, 238, 234, 0.04);
+    border: 1px solid var(--hairline);
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.35s var(--ease);
+  }
+
+  .vibe-nav__logout:hover {
+    color: var(--accent);
+    border-color: rgba(216, 195, 160, 0.45);
+    background: rgba(216, 195, 160, 0.12);
+    box-shadow: 0 0 12px rgba(216, 195, 160, 0.15);
   }
 
   @media (max-width: 640px) {
@@ -903,6 +925,8 @@
     <nav class="vibe-nav__links">
       <a href="insights.html">品牌聲景</a>
       <a href="pricing.html" class="active">方案與定價</a>
+      <a href="history.html">我的紀錄</a>
+      <button id="logoutBtn" type="button" class="vibe-nav__logout">登出</button>
     </nav>
   </header>
 
@@ -1493,6 +1517,21 @@
     setupInputs();
     calculateROI();
   });
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    if (window.VibeSpaceAuth) {
+      window.VibeSpaceAuth.requireUser();
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          await window.VibeSpaceAuth.signOut();
+          window.location.href = "login.html";
+        });
+      }
+    }
   </script>
 </body>
 </html>
