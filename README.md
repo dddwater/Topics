@@ -77,7 +77,7 @@ Topics/
 
 | 貢獻者 | 主要分工 | 對應分支／內容 |
 | --- | --- | --- |
-| `dddwater` | 專案整合、PR 管理、測試與 GitHub Pages 部署 | `delivery`、各整合與修正 PR |
+| `dddwater` | 專案整合、PR 管理、測試、bug修改與 GitHub Pages 部署 | `delivery`、各整合與修正 PR |
 | `CHIN FE LIU`（`emma63194`） | 主視覺播放頁、情境判定與核心播放引擎移植 | `feature/main-ui`、`feature/vibespace-core-port` |
 | `shine971103` | ROI／定價頁、響應式版面與部分介面優化 | `feature/pricing`、`feature/settings` |
 | `Lin Li Cheng`（`Lee9207212`） | Supabase Auth、登入註冊、個人使用紀錄、資料表與 RLS | `feature/user-account` |
