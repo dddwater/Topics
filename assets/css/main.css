@@ -184,24 +184,36 @@ body {
 }
 
 .vibe-nav__logout {
-  margin-left: 2rem;
-  padding: 0.25rem 0.85rem;
-  color: var(--text-muted);
-  font-size: 0.76rem;
+  margin-left: 1.35rem;
+  padding: 0.48rem 0.9rem;
+  border: 1px solid rgba(216, 195, 160, 0.24);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(216, 195, 160, 0.1), rgba(240, 238, 234, 0.025));
+  color: rgba(240, 238, 234, 0.7);
+  font: inherit;
+  font-size: 0.7rem;
   letter-spacing: 0.14em;
-  background: rgba(240, 238, 234, 0.04);
-  border: 1px solid var(--hairline);
-  border-radius: 20px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.35s var(--ease);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: color 0.35s var(--ease), border-color 0.35s var(--ease),
+    background 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
 
 .vibe-nav__logout:hover {
   color: var(--accent);
-  border-color: rgba(216, 195, 160, 0.45);
+  border-color: rgba(216, 195, 160, 0.48);
   background: rgba(216, 195, 160, 0.12);
-  box-shadow: 0 0 12px rgba(216, 195, 160, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.vibe-nav__logout:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.vibe-nav__logout:active {
+  background: rgba(216, 195, 160, 0.18);
 }
 
 /* ---------- 主區塊 ---------- */
