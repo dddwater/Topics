@@ -25,7 +25,16 @@ body {
     "Noto Sans TC", "Helvetica Neue", sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
+  /* This page was originally short enough to always fit one screen, so
+     scrolling was blocked outright. The diagnostics box, mode caption, and
+     especially the "查看四種模式的差異" table pushed real content past one
+     viewport height on shorter screens — with scrolling blocked, that
+     content became genuinely unreachable instead of just requiring a
+     scroll. Keep blocking horizontal scroll (the glow backgrounds bleed
+     slightly past the edges) but allow vertical.
+  */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ---------- 背景層 ---------- */
