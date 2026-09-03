@@ -290,6 +290,8 @@
   const bars = Array.from(document.querySelectorAll(".vibe-meter__bar"));
   const modeButtons = Array.from(document.querySelectorAll("[data-vibe-mode]"));
   const modeCaption = document.getElementById("vibeModeCaption");
+  const modeDetailsToggle = document.getElementById("vibeModeDetailsToggle");
+  const modeDetailsPanel = document.getElementById("vibeModeDetailsPanel");
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
   const candidateRow = document.getElementById("vibeCandidateRow");
@@ -495,6 +497,14 @@
     if (!active) return;
     const meta = await window.VibeAudioEngine?.skipTrack?.();
     if (meta) renderTrack(meta);
+  });
+
+  modeDetailsToggle?.addEventListener("click", () => {
+    if (!modeDetailsPanel) return;
+    const expanded = !modeDetailsPanel.hidden;
+    modeDetailsPanel.hidden = expanded;
+    modeDetailsToggle.setAttribute("aria-expanded", String(!expanded));
+    modeDetailsToggle.textContent = expanded ? "查看四種模式的差異 ▾" : "收起說明 ▴";
   });
 
   const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();
