@@ -6,7 +6,7 @@
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="assets/images/vibespace-icon.png" />
   <title>VibeSpace</title>
-  <link rel="stylesheet" href="assets/css/main.css?v=status-line-dedup-1" />
+  <link rel="stylesheet" href="assets/css/main.css?v=fade-and-previous-1" />
 </head>
 <body>
   <div class="vibe-bg">
@@ -59,6 +59,7 @@
     </dl>
 
     <div class="vibe-track" aria-live="polite">
+      <button id="vibePrevious" type="button" class="vibe-track__skip" disabled>« 上一首</button>
       <span id="vibeTrack"></span>
       <button id="vibeSkip" type="button" class="vibe-track__skip">下一首 »</button>
     </div>
@@ -100,10 +101,10 @@
     });
   </script>
   <script src="assets/js/context-engine.js?v=candidate-status-1"></script>
-  <script src="assets/js/soundscape-player.js?v=classification-diagnostics-1"></script>
+  <script src="assets/js/soundscape-player.js?v=fade-1"></script>
   <script src="assets/js/track-selector.js"></script>
   <script src="assets/js/freesound-candidates.js"></script>
-  <script src="assets/js/main.js?v=status-line-dedup-1"></script>
+  <script src="assets/js/main.js?v=fade-and-previous-1"></script>
   <script src="assets/js/session-recorder.js"></script>
 </body>
 </html>

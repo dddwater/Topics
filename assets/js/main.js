@@ -56,6 +56,14 @@
   let startedAt = 0;
   let smoothedLongTermDb = DEFAULT_CALIBRATION.normalBaselineDbRel;
   let trackIndexes = { low: null, medium: null, high: null };
+  // Per-energy play history so "上一首" can step back through what was
+  // actually played, independent of NonRepeatingTrackSelector's random
+  // picks (which have no notion of "previous" — re-running it can't
+  // reconstruct what came before). Same shape as browser history: going
+  // back and then picking a *new* track truncates anything past the
+  // current pointer before appending.
+  let playHistory = { low: [], medium: [], high: [] };
+  let historyPointer = { low: -1, medium: -1, high: -1 };
 
   async function selectRandomTrack(energy, reason) {
     const nextIndex = trackSelector.next(energy, trackIndexes[energy]);
@@ -64,7 +72,23 @@
       : getSoundscapeMeta(energy, nextIndex);
     if (!meta) return null;
     trackIndexes = { ...trackIndexes, [energy]: nextIndex };
+    playHistory[energy] = playHistory[energy].slice(0, historyPointer[energy] + 1);
+    playHistory[energy].push(nextIndex);
+    historyPointer[energy] = playHistory[energy].length - 1;
     onTrackChange?.(meta, { energy, trackIndex: nextIndex, reason });
+    return meta;
+  }
+
+  async function selectPreviousTrack(energy) {
+    if (historyPointer[energy] <= 0) return null;
+    const previousIndex = playHistory[energy][historyPointer[energy] - 1];
+    const meta = player?.active
+      ? await player.setTrack(energy, previousIndex)
+      : getSoundscapeMeta(energy, previousIndex);
+    if (!meta) return null;
+    historyPointer[energy] -= 1;
+    trackIndexes = { ...trackIndexes, [energy]: previousIndex };
+    onTrackChange?.(meta, { energy, trackIndex: previousIndex, reason: "manual-previous" });
     return meta;
   }
 
@@ -200,6 +224,15 @@
     return selectRandomTrack(energy, "manual-skip");
   }
 
+  function previousTrack() {
+    const energy = latestDecisionEnergy;
+    return selectPreviousTrack(energy);
+  }
+
+  function hasPreviousTrack() {
+    return historyPointer[latestDecisionEnergy] > 0;
+  }
+
   async function start(options = {}) {
     if (microphoneStream) return;
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -222,6 +255,8 @@
     currentGainDb = calibration.preferredGainDb;
     smoothedLongTermDb = calibration.normalBaselineDbRel;
     trackIndexes = { low: null, medium: null, high: null };
+    playHistory = { low: [], medium: [], high: [] };
+    historyPointer = { low: -1, medium: -1, high: -1 };
     trackSelector.reset();
 
     microphoneStream = await navigator.mediaDevices.getUserMedia({
@@ -241,6 +276,8 @@
     player.onTrackCycleComplete = handleTrackCycleComplete;
     const initialIndex = trackSelector.next("medium", null);
     trackIndexes.medium = initialIndex;
+    playHistory.medium = [initialIndex];
+    historyPointer.medium = 0;
     await player.play("medium", currentGainDb, initialIndex);
     onTrackChange?.(getSoundscapeMeta("medium", initialIndex), {
       energy: "medium",
@@ -287,7 +324,9 @@
     return player?.active?.meta || null;
   }
 
-  window.VibeAudioEngine = { start, stop, getConfiguration, getCurrentTrack, skipTrack, setOperationMode };
+  window.VibeAudioEngine = {
+    start, stop, getConfiguration, getCurrentTrack, skipTrack, previousTrack, hasPreviousTrack, setOperationMode,
+  };
   window.addEventListener("pagehide", () => {
     void stop();
   });
@@ -304,6 +343,7 @@
   const modeDetailsToggle = document.getElementById("vibeModeDetailsToggle");
   const modeDetailsPanel = document.getElementById("vibeModeDetailsPanel");
   const trackLabel = document.getElementById("vibeTrack");
+  const previousButton = document.getElementById("vibePrevious");
   const skipButton = document.getElementById("vibeSkip");
   const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
   const playingRow = document.getElementById("vibePlayingRow");
@@ -408,6 +448,7 @@
       lastPlayingEnergyLabel = playingLabel;
       updatePlayingRowVisibility();
     }
+    if (previousButton) previousButton.disabled = !window.VibeAudioEngine?.hasPreviousTrack?.();
   }
 
   function setActiveMode(mode) {
@@ -465,18 +506,28 @@
 
   async function stop() {
     active = false;
+    toggle.disabled = true;
     toggle.setAttribute("aria-pressed", "false");
     label.textContent = "開始";
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
+    if (previousButton) previousButton.disabled = true;
     if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
     if (playingRow) playingRow.hidden = true;
     if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
     lastDetectedEnergyLabel = null;
     lastPlayingEnergyLabel = null;
 
-    await window.VibeAudioEngine?.stop?.();
+    // engine.stop() now fades the music out before actually pausing/closing
+    // (see soundscape-player.js), so this genuinely takes a moment — keep
+    // the toggle disabled until it resolves so a quick re-click can't start
+    // a new session while the previous one is still fading/cleaning up.
+    try {
+      await window.VibeAudioEngine?.stop?.();
+    } finally {
+      toggle.disabled = false;
+    }
     stopSimulation();
     reset();
     window.dispatchEvent(new CustomEvent("vibespace:session-stop"));
@@ -493,6 +544,12 @@
       window.VibeAudioEngine?.setOperationMode?.(mode);
       setActiveMode(mode);
     });
+  });
+
+  previousButton?.addEventListener("click", async () => {
+    if (!active) return;
+    const meta = await window.VibeAudioEngine?.previousTrack?.();
+    if (meta) renderTrack(meta);
   });
 
   skipButton?.addEventListener("click", async () => {
