@@ -50,6 +50,8 @@
 
   let currentState = "social";
   let latestDecisionEnergy = "medium";
+  let candidateState = "social";
+  let candidateStartedAt = 0;
   let currentGainDb = DEFAULT_CALIBRATION.preferredGainDb;
   let startedAt = 0;
   let smoothedLongTermDb = DEFAULT_CALIBRATION.normalBaselineDbRel;
@@ -119,6 +121,10 @@
   }
 
   function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
+    const decisionTime = Date.now();
+    const candidateSeconds = candidateStartedAt
+      ? (decisionTime - candidateStartedAt) / 1000
+      : 0;
     const decision = decideContext({
       shortTermDbRel,
       longTermDbRel,
@@ -129,20 +135,32 @@
       currentGainDb,
       operationMode,
       calibration,
+      candidateState,
+      candidateSeconds,
       canChangeTrack: true,
       manualHold: operationMode === "manual",
     });
 
+    if (decision.candidateState && decision.candidateState !== candidateState) {
+      candidateState = decision.candidateState;
+      candidateStartedAt = decisionTime;
+    }
+
     if (decision.state !== "transient" && decision.state !== "uncertain") {
       currentState = decision.state;
     }
+    if (candidateState === currentState) candidateStartedAt = decisionTime;
     latestDecisionEnergy = decision.energy;
     currentGainDb = decision.targetGainDb;
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
     }
 
-    onDecision?.(decision, { longTermDbRel, shortTermDbRel });
+    onDecision?.(decision, {
+      longTermDbRel,
+      shortTermDbRel,
+      activeEnergy: player?.activeEnergy || null,
+    });
     return decision;
   }
 
@@ -189,6 +207,8 @@
     calibration = configuration.calibration;
     currentState = "social";
     latestDecisionEnergy = "medium";
+    candidateState = "social";
+    candidateStartedAt = Date.now();
     currentGainDb = calibration.preferredGainDb;
     smoothedLongTermDb = calibration.normalBaselineDbRel;
     trackIndexes = { low: null, medium: null, high: null };
@@ -306,9 +326,13 @@
     });
   }
 
-  function renderDecision(decision) {
+  function renderDecision(decision, context = {}) {
     if (!decision) return;
-    status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}`;
+    const pendingLabels = { low: "Quiet", medium: "Social", high: "Busy" };
+    const pending = context.activeEnergy && decision.energy !== context.activeEnergy
+      ? ` ・ 下一首將切換為 ${pendingLabels[decision.energy] || decision.energy}`
+      : "";
+    status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}${pending}`;
   }
 
   function renderTrack(meta) {
