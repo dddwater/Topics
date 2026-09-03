@@ -307,6 +307,7 @@
     uncertain: "Uncertain · 等待確認",
   };
   const ENERGY_LABELS = { low: "Quiet", medium: "Social", high: "Busy" };
+  const STATE_BY_ENERGY = { low: "quiet", medium: "social", high: "busy" };
 
   let active = false;
   let simTimer = null;
@@ -333,12 +334,17 @@
 
   function renderDecision(decision, context = {}) {
     if (!decision) return;
-    const pending = context.activeEnergy && decision.energy !== context.activeEnergy
-      ? ` ・ 下一首將切換為 ${ENERGY_LABELS[decision.energy] || decision.energy}`
-      : "";
-    status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}${pending}`;
+    const rawCandidate = decision.candidateState || decision.state;
+    const candidate = ["quiet", "social", "busy"].includes(rawCandidate)
+      ? rawCandidate
+      : STATE_BY_ENERGY[decision.energy] || "social";
+    const candidateName = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
+    if (decision.reasonCode === "STATE_CONFIRMING") {
+      status.textContent = `${candidateName} · ${decision.reason}`;
+    } else {
+      status.textContent = candidateName;
+    }
 
-    const candidate = decision.candidateState || decision.state;
     if (candidateLabel) candidateLabel.textContent = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
     if (confirmationLabel) {
       confirmationLabel.textContent = decision.reasonCode === "STATE_CONFIRMING"
@@ -381,7 +387,7 @@
     toggle.disabled = true;
     toggle.setAttribute("aria-pressed", "true");
     label.textContent = "停止";
-    status.textContent = "聆聽環境音量中";
+    status.textContent = "";
     meter.classList.add("is-active");
 
     try {
@@ -392,9 +398,7 @@
           onTrackChange: renderTrack,
         });
         setActiveMode(engineState.operationMode);
-        status.textContent = engineState.source === "manual"
-          ? `已套用「${engineState.profileName}」・聆聽環境中`
-          : "自動偵測中・聆聽環境音量";
+        status.textContent = "";
       } else {
         startSimulation();
       }
@@ -452,7 +456,7 @@
   if (initialConfiguration) {
     setActiveMode(initialConfiguration.operationMode);
     if (initialConfiguration.source === "manual") {
-      status.textContent = `已準備「${initialConfiguration.profile.name}」手動設定`;
+      status.textContent = "";
     }
   }
   reset();
