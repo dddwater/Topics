@@ -93,17 +93,16 @@
 
   function loadSavedSettings() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      const profile = saved?.acousticProfile;
-      const validManualSettings = saved?.version === 2
-        && saved?.source === "manual"
-        && profile?.name
-        && profile?.id;
-
-      return {
-        profile: validManualSettings ? profile : null,
-        operationMode: saved?.operationMode || "balanced",
-      };
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        // Automatically purge legacy space settings from removed space-settings page
+        if (saved?.source === "manual" || saved?.acousticProfile?.id === "near-field") {
+          localStorage.removeItem(STORAGE_KEY);
+          return { profile: null, operationMode: "balanced" };
+        }
+      }
+      return { profile: null, operationMode: "balanced" };
     } catch (error) {
       return { profile: null, operationMode: "balanced" };
     }
