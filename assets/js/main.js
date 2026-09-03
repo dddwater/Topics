@@ -305,10 +305,6 @@
   const modeDetailsPanel = document.getElementById("vibeModeDetailsPanel");
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
-  const candidateRow = document.getElementById("vibeCandidateRow");
-  const candidateLabel = document.getElementById("vibeCandidate");
-  const confirmationRow = document.getElementById("vibeConfirmationRow");
-  const confirmationLabel = document.getElementById("vibeConfirmation");
   const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
   const playingRow = document.getElementById("vibePlayingRow");
   const playingEnergyLabel = document.getElementById("vibePlayingEnergy");
@@ -389,14 +385,6 @@
       status.textContent = candidateName;
     }
 
-    if (candidateRow) candidateRow.hidden = !isConfirming;
-    if (confirmationRow) confirmationRow.hidden = !isConfirming;
-    if (candidateLabel) candidateLabel.textContent = candidateName;
-    if (confirmationLabel) {
-      confirmationLabel.textContent = isConfirming
-        ? `${Math.min(decision.confirmationSeconds, Math.floor(decision.candidateSeconds))} / ${decision.confirmationSeconds} 秒`
-        : "已確認";
-    }
     if (detectedEnergyLabel) {
       const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
       detectedEnergyLabel.textContent = detectedLabel;
@@ -482,10 +470,6 @@
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
-    if (candidateRow) candidateRow.hidden = true;
-    if (candidateLabel) candidateLabel.textContent = "尚未偵測";
-    if (confirmationRow) confirmationRow.hidden = true;
-    if (confirmationLabel) confirmationLabel.textContent = "—";
     if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
     if (playingRow) playingRow.hidden = true;
     if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
