@@ -415,10 +415,13 @@ body {
   margin: 0.4rem auto 0;
   padding: 10px 14px;
   gap: 8px;
-  border: 1px solid rgba(216, 195, 160, 0.35);
+  border: 1px solid rgba(216, 195, 160, 0.16);
   border-radius: 14px;
-  background: rgba(255, 252, 246, 0.88);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: linear-gradient(135deg, rgba(22, 24, 29, 0.78), rgba(10, 12, 15, 0.68));
+  backdrop-filter: blur(22px) saturate(125%);
+  -webkit-backdrop-filter: blur(22px) saturate(125%);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .vibe-diagnostics > div {
@@ -427,16 +430,20 @@ body {
   text-align: center;
 }
 
+.vibe-diagnostics > div + div {
+  border-left: 1px solid rgba(216, 195, 160, 0.1);
+}
+
 .vibe-diagnostics dt {
   margin-bottom: 4px;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
 }
 
 .vibe-diagnostics dd {
   margin: 0;
-  color: #0f172a;
+  color: var(--accent);
   font-size: 0.88rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -447,6 +454,14 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 0.6rem 0.85rem;
+  }
+
+  .vibe-diagnostics > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .vibe-diagnostics > div:nth-child(n + 3) {
+    border-top: 1px solid rgba(216, 195, 160, 0.1);
   }
 }
 
