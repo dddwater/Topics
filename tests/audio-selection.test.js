@@ -330,6 +330,133 @@ async function testManualModeDoesNotSnapOnExit() {
   await window.VibeAudioEngine.stop();
 }
 
+// User feedback: the status line flickered "尚在確認中" text on and off
+// because it appeared the instant a candidate showed up (0/10s), including
+// for borderline candidates that never actually persisted. main.js now
+// withholds that text until the candidate has held for a few seconds. This
+// drives the real engine end-to-end (mocked mic/audio/DOM/clock) through a
+// real button click, since the gating lives in the UI-wiring IIFE's
+// renderDecision, not in the exported VibeAudioEngine API.
+async function testConfirmingTextWaitsBeforeAppearing() {
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAnalyser {
+    constructor() { this.fftSize = 2048; this.sample = 0; }
+    getFloatTimeDomainData(array) { array.fill(this.sample); }
+  }
+  const contextInstances = [];
+  class MockAudioContext {
+    constructor() {
+      this.state = "running";
+      this.destination = {};
+      this.analyser = new MockAnalyser();
+      contextInstances.push(this);
+    }
+    createAnalyser() { return this.analyser; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+
+  function makeEl(id, initialHidden = false) {
+    return {
+      id, style: {}, _hidden: initialHidden, textContent: "", _listeners: {},
+      get hidden() { return this._hidden; }, set hidden(value) { this._hidden = value; },
+      classList: { add() {}, remove() {}, toggle() {} },
+      addEventListener(name, callback) { this._listeners[name] = callback; },
+      removeEventListener() {}, setAttribute() {}, disabled: false,
+    };
+  }
+  const byId = { vibePlayingRow: makeEl("vibePlayingRow", true) };
+  ["vibeToggle", "vibeLabel", "vibeStatus", "vibeTrack", "vibeSkip", "vibeDetectedEnergy", "vibePlayingEnergy",
+   "vibeModeCaption", "vibeModeDetailsToggle", "vibeModeDetailsPanel"]
+    .forEach((id) => { byId[id] = makeEl(id); });
+  const meterEl = makeEl("meter");
+  const documentMock = {
+    getElementById: (id) => byId[id] || makeEl(id),
+    querySelector: () => meterEl,
+    querySelectorAll: () => [],
+  };
+  const navigatorMock = {
+    mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) },
+  };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let clock = 1_700_000_000_000;
+  const DateMock = { now: () => clock };
+  let rafCallback = null;
+  const requestAnimationFrame = (callback) => { rafCallback = callback; return 1; };
+  const cancelAnimationFrame = () => { rafCallback = null; };
+
+  const window = { AudioContext: MockAudioContext, dispatchEvent() {}, addEventListener() {} };
+  loadScript("assets/js/context-engine.js", { window });
+  loadScript("assets/js/track-selector.js", { window });
+  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+  loadScript("assets/js/main.js", {
+    window,
+    document: documentMock,
+    navigator: navigatorMock,
+    localStorage,
+    Date: DateMock,
+    Audio: MockAudio,
+    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+    requestAnimationFrame,
+    cancelAnimationFrame,
+    setInterval: () => 1,
+    clearInterval: () => {},
+  });
+
+  byId.vibeToggle._listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const tick = () => rafCallback();
+  const micAnalyser = contextInstances[0].analyser;
+  const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
+
+  // Converge to a stable busy candidate with the clock held fixed, so
+  // candidateSeconds starts at (essentially) zero once confirming begins —
+  // matches the same trick testManualModeDoesNotSnapOnExit uses.
+  setLevelDb(-30);
+  // Clock stays frozen for the whole ramp, so candidateSeconds can never
+  // exceed 0 here regardless of how many times the raw candidate flips
+  // while smoothedLongTermDb is still catching up -- 200 ticks is far more
+  // than enough (0.94^200 is negligible) for it to fully settle on "busy"
+  // and stop flipping, which is what the clock-stepping phase below relies
+  // on (a stable candidate that no longer resets candidateStartedAt).
+  for (let i = 0; i < 200; i += 1) tick();
+  assert.equal(byId.vibeStatus.textContent, "Social", "must not show confirming text the instant a candidate appears");
+
+  clock += 2_000;
+  tick();
+  assert.equal(byId.vibeStatus.textContent, "Social", "still under the delay window, must keep showing the settled name only");
+
+  clock += 1_500; // total ~3.5s into this candidate
+  tick();
+  assert.match(byId.vibeStatus.textContent, /^Busy · .*確認中.*\d+ \/ 10 秒/, "past the delay window, confirming text should now appear");
+
+  clock += 7_000; // total ~10.5s, past the 10s confirmation threshold
+  tick();
+  assert.equal(byId.vibeStatus.textContent, "Busy", "once confirmed, status reverts to the plain settled name");
+
+  await window.VibeAudioEngine.stop();
+}
+
 async function testFreesoundFiltersAndSnapshot() {
   const storage = new Map();
   const localStorage = {
@@ -383,7 +510,7 @@ function testDetectionDiagnosticsMarkup() {
   }
   assert.doesNotMatch(index, /id=["']vibeCandidate["']/, "candidate row should stay removed (redundant with the status line)");
   assert.doesNotMatch(index, /id=["']vibeConfirmation["']/, "confirmation row should stay removed (redundant with the status line)");
-  assert.match(index, /main\.js\?v=status-line-dedup-1/, "main.js cache key should be refreshed");
+  assert.match(index, /main\.js\?v=confirming-delay-1/, "main.js cache key should be refreshed");
   assert.match(index, /main\.css\?v=status-line-dedup-1/, "main.css cache key should be refreshed");
 }
 
@@ -391,6 +518,7 @@ function testDetectionDiagnosticsMarkup() {
   await testSelector();
   await testCandidateStateConfirmation();
   await testManualModeDoesNotSnapOnExit();
+  await testConfirmingTextWaitsBeforeAppearing();
   await testLibraryAndLoopCount();
   await testFreesoundFiltersAndSnapshot();
   testDetectionDiagnosticsMarkup();

@@ -378,12 +378,19 @@
       ? rawCandidate
       : STATE_BY_ENERGY[decision.energy] || "social";
     const candidateName = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
+    const settledName = STATE_LABELS[decision.state]?.split(" · ")[0] || decision.state;
     const isConfirming = decision.reasonCode === "STATE_CONFIRMING";
-    if (isConfirming) {
-      status.textContent = `${candidateName} · ${decision.reason}`;
-    } else {
-      status.textContent = candidateName;
-    }
+    // Borderline noise can make a candidate flicker in and out before it
+    // ever actually commits, so surfacing "尚在確認中" the instant a
+    // candidate appears (0/10s) made the status line flicker on and off
+    // for blips that were never going anywhere. Wait a few seconds before
+    // announcing it's actively confirming; below that it just keeps
+    // showing the last settled state, same as when nothing is happening.
+    const CONFIRMING_TEXT_DELAY_SECONDS = 3;
+    const showConfirmingText = isConfirming && decision.candidateSeconds >= CONFIRMING_TEXT_DELAY_SECONDS;
+    status.textContent = showConfirmingText
+      ? `${candidateName} · ${decision.reason}`
+      : settledName;
 
     if (detectedEnergyLabel) {
       const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
