@@ -3,6 +3,10 @@
 (() => {
   "use strict";
 
+  // `loop: true` marks a short ambient bed meant to repeat in place (e.g. calm-loop.mp3,
+  // ~19s). Regular full-length songs omit it and play through once before the player
+  // moves on to the next track — repeating a 2-4 minute song back-to-back doesn't match
+  // real venue playback.
   const TRACKS = {
     low: [
       {
@@ -66,6 +70,7 @@
         artist: "wipics",
         subtitle: "Social · Ambient percussion",
         src: "assets/audio/calm-loop.mp3",
+        loop: true,
       },
     ],
     high: [
@@ -227,7 +232,7 @@
         trackIndex,
         meta,
         loopsPlayed: 0,
-        loopGoal: 2 + Math.floor(this.random() * 2),
+        loopGoal: meta.loop ? 2 + Math.floor(this.random() * 2) : 1,
       };
       scene.onEnded = () => {
         if (this.destroyed || this.active !== scene) return;

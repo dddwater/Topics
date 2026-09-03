@@ -90,10 +90,32 @@
     let reason = "現場處於穩定交談狀態，維持品牌設定的基準音量。";
 
     if (candidate === "quiet") {
-      targetGainDb = calibration.preferredGainDb - 2;
       energy = "low";
-      reasonCode = "QUIET_SUSTAINED";
-      reason = "空間持續安靜，輕微降低存在感並維持柔和聲景。";
+      if (operationMode === "comfort") {
+        targetGainDb = calibration.preferredGainDb - 3;
+        reasonCode = "QUIET_COMFORT";
+        reason = "空間持續安靜；Comfort 模式進一步降低存在感，維持最柔和的聲景。";
+      } else if (operationMode === "flow") {
+        targetGainDb = calibration.preferredGainDb - 1;
+        reasonCode = "QUIET_FLOW";
+        reason = "空間持續安靜；Flow 模式保留較多存在感，避免氣氛降得過快。";
+      } else {
+        targetGainDb = calibration.preferredGainDb - 2;
+        reasonCode = "QUIET_SUSTAINED";
+        reason = "空間持續安靜，輕微降低存在感並維持柔和聲景。";
+      }
+    }
+
+    if (candidate === "social") {
+      if (operationMode === "comfort") {
+        targetGainDb = calibration.preferredGainDb - 1;
+        reasonCode = "SOCIAL_COMFORT";
+        reason = "現場處於穩定交談狀態；Comfort 模式維持稍柔和的基準音量。";
+      } else if (operationMode === "flow") {
+        targetGainDb = calibration.preferredGainDb + 1;
+        reasonCode = "SOCIAL_FLOW";
+        reason = "現場處於穩定交談狀態；Flow 模式提前拉高一點氣氛感，銜接忙碌狀態。";
+      }
     }
 
     if (candidate === "busy") {

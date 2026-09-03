@@ -8,6 +8,7 @@
   const { NonRepeatingTrackSelector } = window.VibeSpaceTrackSelection;
 
   const STORAGE_KEY = "vibespace.spaceSettings";
+  const VALID_OPERATION_MODES = ["comfort", "balanced", "flow", "manual"];
   const DEFAULT_PROFILE = {
     id: "automatic",
     name: "自動偵測",
@@ -101,6 +102,10 @@
           localStorage.removeItem(STORAGE_KEY);
           return { profile: null, operationMode: "balanced" };
         }
+        const operationMode = VALID_OPERATION_MODES.includes(saved?.operationMode)
+          ? saved.operationMode
+          : "balanced";
+        return { profile: null, operationMode };
       }
       return { profile: null, operationMode: "balanced" };
     } catch (error) {
@@ -119,7 +124,19 @@
     };
   }
 
-  function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
+  // dataQuality feeds context-engine.js's LOW_DATA_QUALITY safety hold, so it
+  // must reflect whether the mic signal is actually trustworthy: an
+  // ended/muted track (hardware unplugged, OS-level mute) or a signal that's
+  // essentially silent or clipped should not be treated as reliable input.
+  function computeDataQuality(rms) {
+    const track = microphoneStream?.getTracks?.()[0];
+    if (track && (track.readyState === "ended" || track.muted === true)) return 0.2;
+    if (rms < 0.00003) return 0.35;
+    if (rms > 0.9) return 0.4;
+    return 0.94;
+  }
+
+  function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds, dataQuality) {
     const decisionTime = Date.now();
     // Manual mode short-circuits decideContext before it ever updates the
     // candidate tracker, so a pending (unconfirmed) candidate from just
@@ -139,7 +156,7 @@
       shortTermDbRel,
       longTermDbRel,
       transientScore,
-      dataQuality: 0.94,
+      dataQuality,
       sustainedSeconds,
       currentState,
       currentGainDb,
@@ -188,8 +205,9 @@
     const spike = Math.max(0, db - smoothedLongTermDb);
     const transientScore = Math.min(1, spike / 11);
     const sustainedSeconds = Math.min(120, (Date.now() - startedAt) / 1000);
+    const dataQuality = computeDataQuality(rms);
 
-    const decision = runDecision(smoothedLongTermDb, db, transientScore, sustainedSeconds);
+    const decision = runDecision(smoothedLongTermDb, db, transientScore, sustainedSeconds, dataQuality);
     onLevel?.(Math.min(1, Math.max(0, (db + 60) / 60)), { rms, db, decision });
 
     animationFrameId = requestAnimationFrame(measure);
@@ -262,10 +280,12 @@
     microphoneSource = null;
     microphoneStream?.getTracks().forEach((track) => track.stop());
     microphoneStream = null;
-    if (audioContext && audioContext.state !== "closed") await audioContext.close();
+    if (audioContext && audioContext.state !== "closed") {
+      await audioContext.close().catch((error) => console.error("audioContext.close() failed", error));
+    }
     audioContext = null;
     analyser = null;
-    await player?.destroy();
+    await player?.destroy().catch((error) => console.error("player.destroy() failed", error));
     player = null;
     onLevel = null;
     onDecision = null;
@@ -476,7 +496,11 @@
     lastDetectedEnergyLabel = null;
     lastPlayingEnergyLabel = null;
 
-    await window.VibeAudioEngine?.stop?.();
+    try {
+      await window.VibeAudioEngine?.stop?.();
+    } catch (error) {
+      console.error("VibeAudioEngine.stop() failed; continuing cleanup", error);
+    }
     stopSimulation();
     reset();
     window.dispatchEvent(new CustomEvent("vibespace:session-stop"));
