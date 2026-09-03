@@ -127,6 +127,7 @@
       this.onTrackEnded = options.onTrackEnded || null;
       this.onTrackCycleComplete = options.onTrackCycleComplete || null;
       this.random = options.random || Math.random;
+      this.fadeSeconds = options.fadeSeconds ?? 1.2;
     }
 
     ensureContext() {
@@ -146,7 +147,10 @@
       this.destroyed = false;
       this.ensureContext();
       if (!this.context || !this.master) return;
-      this.master.gain.setValueAtTime(this.toDemoGain(gainDb), this.context.currentTime);
+      const now = this.context.currentTime;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(0.0001, now);
+      this.master.gain.linearRampToValueAtTime(this.toDemoGain(gainDb), now + this.fadeSeconds);
       void this.context.resume().catch(() => undefined);
       if (!this.active) {
         this.active = this.createScene(energy, trackIndex, 1);
@@ -157,7 +161,19 @@
     }
 
     async pause() {
+      await this.fadeOutMaster();
       this.active?.audio.pause();
+    }
+
+    async fadeOutMaster() {
+      if (!this.context || !this.master) return;
+      const now = this.context.currentTime;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now);
+      this.master.gain.linearRampToValueAtTime(0.0001, now + this.fadeSeconds);
+      if (this.fadeSeconds > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, this.fadeSeconds * 1000));
+      }
     }
 
     setTargetGainDb(gainDb, rampSeconds = 1.8) {
@@ -199,6 +215,7 @@
     async destroy() {
       this.destroyed = true;
       this.trackRequestId += 1;
+      if (this.active) await this.fadeOutMaster();
       if (this.active) this.stopScene(this.active);
       this.active = null;
       this.activeEnergy = null;

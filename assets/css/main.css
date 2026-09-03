@@ -592,6 +592,12 @@ body {
   background: rgba(216, 195, 160, 0.08);
 }
 
+.vibe-track__skip:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* ---------- 營運意圖切換 ---------- */
 
 .vibe-modes {

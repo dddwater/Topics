@@ -46,7 +46,7 @@ async function testLibraryAndLoopCount() {
     pause() { this.paused = true; }
   }
   const node = () => ({
-    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, setValueCurveAtTime() {} },
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {}, setValueCurveAtTime() {} },
     connect() { return this; },
     disconnect() {},
   });
@@ -70,7 +70,7 @@ async function testLibraryAndLoopCount() {
   }
 
   let completed = null;
-  const player = new api.SoundscapePlayer({ random: () => 0, onTrackCycleComplete: (event) => { completed = event; } });
+  const player = new api.SoundscapePlayer({ random: () => 0, fadeSeconds: 0, onTrackCycleComplete: (event) => { completed = event; } });
   await player.play("low", -24, 0);
   player.active.audio.listeners.ended();
   assert.equal(completed, null, "two-loop track must replay after the first ending");
@@ -78,7 +78,7 @@ async function testLibraryAndLoopCount() {
   assert.equal(completed.loops, 2);
   await player.destroy();
 
-  const threeLoopPlayer = new api.SoundscapePlayer({ random: () => 0.999, onTrackCycleComplete: (event) => { completed = event; } });
+  const threeLoopPlayer = new api.SoundscapePlayer({ random: () => 0.999, fadeSeconds: 0, onTrackCycleComplete: (event) => { completed = event; } });
   completed = null;
   await threeLoopPlayer.play("high", -24, 0);
   threeLoopPlayer.active.audio.listeners.ended();
@@ -88,7 +88,7 @@ async function testLibraryAndLoopCount() {
   assert.equal(completed.loops, 3);
   await threeLoopPlayer.destroy();
 
-  const singleTrackPlayer = new api.SoundscapePlayer({ random: () => 0 });
+  const singleTrackPlayer = new api.SoundscapePlayer({ random: () => 0, fadeSeconds: 0 });
   await singleTrackPlayer.play("medium", -24, 0);
   await singleTrackPlayer.setTrack("medium", 1);
   await singleTrackPlayer.setTrack("high", 2);
@@ -105,6 +105,7 @@ async function testLibraryAndLoopCount() {
   let boundaryEvent = null;
   const boundaryPlayer = new api.SoundscapePlayer({
     random: () => 0.999,
+    fadeSeconds: 0,
     onTrackEnded: (event) => {
       boundaryEvent = event;
       if (event.energy !== "medium") return false;
@@ -118,6 +119,74 @@ async function testLibraryAndLoopCount() {
   assert.equal(boundaryEvent.loops, 1);
   assert.equal(boundaryPlayer.active.audio.playCount, 1, "old category must not start another loop");
   await boundaryPlayer.destroy();
+}
+
+// Feature request: fade in on start, fade out on stop, instead of the master
+// gain jumping straight to/from its target. Verifies the actual Web Audio
+// automation calls soundscape-player.js issues on its master gain node.
+async function testFadeInOnPlayAndFadeOutOnDestroy() {
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  function makeGainMock() {
+    const calls = [];
+    const mock = {
+      value: 1,
+      setValueAtTime(value) { calls.push(["setValueAtTime", value]); mock.value = value; },
+      cancelScheduledValues() { calls.push(["cancelScheduledValues"]); },
+      exponentialRampToValueAtTime(value) { calls.push(["exponentialRampToValueAtTime", value]); mock.value = value; },
+      linearRampToValueAtTime(value) { calls.push(["linearRampToValueAtTime", value]); mock.value = value; },
+      calls,
+    };
+    return mock;
+  }
+  const sceneNode = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  let masterGainMock = null;
+  const timeoutDelays = [];
+  class MockContext {
+    constructor() { this.currentTime = 0; this.state = "running"; this.destination = {}; }
+    createGain() {
+      // ensureContext() creates the master gain before createScene() ever
+      // creates a per-scene gain, so the first call is always the master.
+      if (!masterGainMock) {
+        masterGainMock = makeGainMock();
+        return { connect() { return this; }, disconnect() {}, gain: masterGainMock };
+      }
+      return sceneNode();
+    }
+    createDynamicsCompressor() { return { ...sceneNode(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    createMediaElementSource() { return sceneNode(); }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+  const browserWindow = {
+    AudioContext: MockContext,
+    setTimeout(callback, delay) { timeoutDelays.push(delay); callback(); return 0; },
+    clearTimeout() {},
+  };
+  const window = loadScript("assets/js/soundscape-player.js", { window: browserWindow, Audio: MockAudio });
+  const api = window.VibeSpaceSoundscape;
+
+  const player = new api.SoundscapePlayer({ random: () => 0 });
+  await player.play("medium", -24, 0);
+  assert.deepEqual(masterGainMock.calls[1], ["setValueAtTime", 0.0001], "must start from near-silence, not jump to target");
+  assert.equal(masterGainMock.calls[2][0], "linearRampToValueAtTime", "must fade in with a ramp");
+  assert.ok(masterGainMock.calls[2][1] > 0.0001, "fade-in target must be above the silent floor");
+
+  masterGainMock.calls.length = 0;
+  await player.destroy();
+  const fadeOutCall = masterGainMock.calls.find((call) => call[0] === "linearRampToValueAtTime");
+  assert.ok(fadeOutCall, "destroy must ramp the master gain down, not cut it instantly");
+  assert.ok(fadeOutCall[1] <= 0.0001, "fade-out target must reach the silent floor");
+  assert.ok(timeoutDelays.some((delay) => delay > 0), "destroy must actually wait for the fade-out before finishing cleanup");
 }
 
 async function testCandidateStateConfirmation() {
@@ -215,7 +284,7 @@ async function testManualModeDoesNotSnapOnExit() {
     pause() { this.paused = true; }
   }
   const node = () => ({
-    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} },
     connect() { return this; },
     disconnect() {},
   });
@@ -274,6 +343,11 @@ async function testManualModeDoesNotSnapOnExit() {
     AudioContext: MockAudioContext,
     dispatchEvent() {},
     addEventListener() {},
+    // Fires immediately instead of really waiting -- engine.stop() now fades
+    // the player out (see soundscape-player.js) before pausing/closing, and
+    // this test doesn't care about fade timing, just that stop() completes.
+    setTimeout(callback) { callback(); return 0; },
+    clearTimeout() {},
   };
   loadScript("assets/js/context-engine.js", { window });
   loadScript("assets/js/track-selector.js", { window });
@@ -326,6 +400,95 @@ async function testManualModeDoesNotSnapOnExit() {
   clock += 10_000;
   tick();
   assert.equal(lastDecision.state, "busy", "should confirm busy after a real post-Manual window");
+
+  await window.VibeAudioEngine.stop();
+}
+
+// Feature request: a "上一首" (previous track) button. NonRepeatingTrackSelector
+// only knows how to pick a *new* random track — it has no notion of "previous",
+// so main.js has to keep its own play-history stack. This drives the real
+// engine end-to-end (mocked mic/audio/DOM/clock) to prove that stack works.
+async function testPreviousTrackStepsBackThroughHistory() {
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAudioContext {
+    constructor() { this.state = "running"; this.destination = {}; }
+    createAnalyser() { return { fftSize: 2048, getFloatTimeDomainData(array) { array.fill(0); } }; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+  const documentMock = {
+    getElementById: () => ({
+      style: {}, textContent: "", addEventListener() {}, removeEventListener() {}, setAttribute() {},
+      classList: { add() {}, remove() {}, toggle() {} },
+    }),
+    querySelector: () => ({ classList: { add() {}, remove() {}, toggle() {} } }),
+    querySelectorAll: () => [],
+  };
+  const navigatorMock = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) } };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let rafCallback = null;
+  const window = {
+    AudioContext: MockAudioContext,
+    dispatchEvent() {},
+    addEventListener() {},
+    setTimeout(callback) { callback(); return 0; },
+    clearTimeout() {},
+  };
+  loadScript("assets/js/context-engine.js", { window });
+  loadScript("assets/js/track-selector.js", { window });
+  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+  loadScript("assets/js/main.js", {
+    window,
+    document: documentMock,
+    navigator: navigatorMock,
+    localStorage,
+    Date,
+    Audio: MockAudio,
+    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+    requestAnimationFrame: (callback) => { rafCallback = callback; return 1; },
+    cancelAnimationFrame: () => { rafCallback = null; },
+  });
+
+  await window.VibeAudioEngine.start({});
+  assert.equal(window.VibeAudioEngine.hasPreviousTrack(), false, "nothing to go back to right after start");
+  assert.equal(await window.VibeAudioEngine.previousTrack(), null, "previous must no-op with empty history");
+
+  const first = window.VibeAudioEngine.getCurrentTrack();
+  const afterSkip1 = await window.VibeAudioEngine.skipTrack();
+  assert.notDeepEqual(afterSkip1, first, "skip must pick a track different from the current one");
+  assert.equal(window.VibeAudioEngine.hasPreviousTrack(), true);
+
+  const afterSkip2 = await window.VibeAudioEngine.skipTrack();
+  assert.notDeepEqual(afterSkip2, afterSkip1, "second skip must also pick a different track");
+
+  const back1 = await window.VibeAudioEngine.previousTrack();
+  assert.deepEqual(back1, afterSkip1, "previous must return to the track played right before the last skip");
+
+  const back2 = await window.VibeAudioEngine.previousTrack();
+  assert.deepEqual(back2, first, "a second previous must return to the very first track");
+
+  assert.equal(window.VibeAudioEngine.hasPreviousTrack(), false, "no history left before the first track");
+  assert.equal(await window.VibeAudioEngine.previousTrack(), null, "previous must no-op once history is exhausted");
 
   await window.VibeAudioEngine.stop();
 }
@@ -383,15 +546,17 @@ function testDetectionDiagnosticsMarkup() {
   }
   assert.doesNotMatch(index, /id=["']vibeCandidate["']/, "candidate row should stay removed (redundant with the status line)");
   assert.doesNotMatch(index, /id=["']vibeConfirmation["']/, "confirmation row should stay removed (redundant with the status line)");
-  assert.match(index, /main\.js\?v=status-line-dedup-1/, "main.js cache key should be refreshed");
-  assert.match(index, /main\.css\?v=status-line-dedup-1/, "main.css cache key should be refreshed");
+  assert.match(index, /main\.js\?v=fade-and-previous-1/, "main.js cache key should be refreshed");
+  assert.match(index, /main\.css\?v=fade-and-previous-1/, "main.css cache key should be refreshed");
 }
 
 (async () => {
   await testSelector();
   await testCandidateStateConfirmation();
   await testManualModeDoesNotSnapOnExit();
+  await testPreviousTrackStepsBackThroughHistory();
   await testLibraryAndLoopCount();
+  await testFadeInOnPlayAndFadeOutOnDestroy();
   await testFreesoundFiltersAndSnapshot();
   testDetectionDiagnosticsMarkup();
   console.log("audio selection tests passed");
