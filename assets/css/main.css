@@ -141,6 +141,13 @@ body {
   font-weight: 400;
   letter-spacing: 0.28em;
   text-transform: uppercase;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.vibe-nav__links {
+  display: flex;
+  align-items: center;
 }
 
 .vibe-nav__links a {
@@ -166,11 +173,13 @@ body {
   transition: transform 0.5s var(--ease);
 }
 
-.vibe-nav__links a:hover {
+.vibe-nav__links a:hover,
+.vibe-nav__links a.active {
   color: var(--text-primary);
 }
 
-.vibe-nav__links a:hover::after {
+.vibe-nav__links a:hover::after,
+.vibe-nav__links a.active::after {
   transform: scaleX(1);
 }
 
@@ -214,10 +223,10 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: clamp(1.35rem, 2.8vh, 2.25rem);
+  justify-content: center;
+  gap: clamp(1.5rem, 3.2vh, 2.5rem);
   text-align: center;
-  padding: 6rem 1.5rem 2.5rem;
+  padding: 5.5rem 1.5rem 2.5rem;
   overflow-x: clip;
 }
 
@@ -406,35 +415,7 @@ body {
 }
 
 .vibe-diagnostics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  width: min(720px, calc(100% - 32px));
-  margin: 14px auto 4px;
-  padding: 12px;
-  gap: 8px;
-  border: 1px solid rgba(181, 141, 91, 0.22);
-  border-radius: 18px;
-  background: rgba(255, 252, 246, 0.6);
-}
-
-.vibe-diagnostics > div {
-  min-width: 0;
-  padding: 7px 10px;
-  text-align: center;
-}
-
-.vibe-diagnostics dt {
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-}
-
-.vibe-diagnostics dd {
-  margin: 0;
-  color: var(--ink);
-  font-size: 0.82rem;
-  font-weight: 650;
+  display: none !important;
 }
 
 @media (max-width: 640px) {
@@ -465,7 +446,7 @@ body {
   }
 
   .vibe-panel {
-    gap: 2.5rem;
+    gap: 1.8rem;
   }
 
   .vibe-orb {
@@ -481,9 +462,9 @@ body {
 
 @media (max-height: 900px) {
   .vibe-panel {
-    gap: 0.8rem;
+    gap: clamp(1rem, 2.2vh, 1.8rem);
     padding-top: 5rem;
-    padding-bottom: 1rem;
+    padding-bottom: 2rem;
   }
 
   .vibe-eyebrow {
@@ -499,8 +480,8 @@ body {
   }
 
   .vibe-orb {
-    width: 128px;
-    height: 128px;
+    width: 138px;
+    height: 138px;
   }
 
   .vibe-orb__ring--inner {
@@ -524,7 +505,6 @@ body {
   .vibe-diagnostics > div {
     padding: 3px 8px;
   }
-
 }
 
 /* ---------- 曲目與播放控制 ---------- */
