@@ -121,6 +121,17 @@
 
   function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
     const decisionTime = Date.now();
+    // Manual mode short-circuits decideContext before it ever updates the
+    // candidate tracker, so a pending (unconfirmed) candidate from just
+    // before Manual was engaged would otherwise sit frozen and keep
+    // accumulating candidateSeconds for the whole Manual session. Re-syncing
+    // the tracker to currentState on every Manual tick means the instant
+    // Manual is turned off, any still-pending candidate has to earn a fresh
+    // confirmation window instead of instantly "confirming" off stale time.
+    if (operationMode === "manual") {
+      candidateState = currentState;
+      candidateStartedAt = decisionTime;
+    }
     const candidateSeconds = candidateStartedAt
       ? (decisionTime - candidateStartedAt) / 1000
       : 0;

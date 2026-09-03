@@ -195,6 +195,141 @@ async function testCandidateStateConfirmation() {
   assert.equal(comfortBusy.energy, "medium", "Comfort intentionally keeps busy rooms on Social energy");
 }
 
+// Regression test for a bug where main.js's candidate-confirmation timer kept
+// counting real wall-clock time while parked in Manual mode (decideContext
+// short-circuits to MANUAL_HOLD before ever touching the candidate tracker).
+// Leaving Manual with a pending-but-unconfirmed candidate from before Manual
+// was engaged would instantly "confirm" it off stale elapsed time instead of
+// requiring a fresh confirmation window. This drives the real assets/js/main.js
+// engine end-to-end (mocked mic/audio/DOM/clock) to prove the fix holds.
+async function testManualModeDoesNotSnapOnExit() {
+  class MockAudio {
+    constructor(src) {
+      this.src = src;
+      this.listeners = {};
+      this.paused = true;
+    }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAnalyser {
+    constructor() { this.fftSize = 2048; this.sample = 0; }
+    getFloatTimeDomainData(array) { array.fill(this.sample); }
+  }
+  const contextInstances = [];
+  class MockAudioContext {
+    constructor() {
+      this.state = "running";
+      this.destination = {};
+      this.analyser = new MockAnalyser();
+      contextInstances.push(this);
+    }
+    createAnalyser() { return this.analyser; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+
+  function makeFakeElement() {
+    return {
+      style: {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      addEventListener() {},
+      removeEventListener() {},
+      setAttribute() {},
+      textContent: "",
+    };
+  }
+  const documentMock = {
+    getElementById: () => makeFakeElement(),
+    querySelector: () => makeFakeElement(),
+    querySelectorAll: () => [],
+  };
+  const navigatorMock = {
+    mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) },
+  };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let clock = 1_700_000_000_000;
+  const DateMock = { now: () => clock };
+  let rafCallback = null;
+  const requestAnimationFrame = (callback) => { rafCallback = callback; return 1; };
+  const cancelAnimationFrame = () => { rafCallback = null; };
+
+  const window = {
+    AudioContext: MockAudioContext,
+    dispatchEvent() {},
+    addEventListener() {},
+  };
+  loadScript("assets/js/context-engine.js", { window });
+  loadScript("assets/js/track-selector.js", { window });
+  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+  loadScript("assets/js/main.js", {
+    window,
+    document: documentMock,
+    navigator: navigatorMock,
+    localStorage,
+    Date: DateMock,
+    Audio: MockAudio,
+    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+    requestAnimationFrame,
+    cancelAnimationFrame,
+  });
+
+  let lastDecision = null;
+  await window.VibeAudioEngine.start({ onDecision: (decision) => { lastDecision = decision; } });
+
+  // main.js builds its mic AudioContext before SoundscapePlayer.play() builds
+  // its own playback AudioContext, so the first instance is the mic analyser.
+  const micAnalyser = contextInstances[0].analyser;
+  const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
+  const tick = () => rafCallback();
+
+  // Drive the smoothed long-term level up to a sustained "busy" reading while
+  // still in Balanced mode, until the engine starts confirming a busy candidate.
+  setLevelDb(-30);
+  for (let i = 0; i < 200 && lastDecision?.reasonCode !== "STATE_CONFIRMING"; i += 1) tick();
+  assert.equal(lastDecision.reasonCode, "STATE_CONFIRMING", "should be confirming a busy candidate");
+  assert.equal(lastDecision.candidateState, "busy");
+  assert.equal(lastDecision.state, "social", "must not have switched yet");
+
+  // Flip to Manual mid-confirmation, then let a lot of real time pass while
+  // parked there (still reading busy-level noise in the background).
+  window.VibeAudioEngine.setOperationMode("manual");
+  tick();
+  clock += 30_000;
+  tick();
+
+  // Exit Manual with the same busy-level reading still pending. Without the
+  // fix this instantly reports state "busy" off the 30s-stale timer.
+  window.VibeAudioEngine.setOperationMode("balanced");
+  tick();
+  assert.notEqual(lastDecision.state, "busy", "must not snap to busy off a stale pre-Manual timer");
+  assert.equal(lastDecision.reasonCode, "STATE_CONFIRMING", "must require a fresh confirmation window");
+  assert.ok(lastDecision.candidateSeconds < 1, "confirmation timer must have restarted near zero");
+
+  // A genuine fresh 10s confirmation window after exiting should still work.
+  clock += 10_000;
+  tick();
+  assert.equal(lastDecision.state, "busy", "should confirm busy after a real post-Manual window");
+
+  await window.VibeAudioEngine.stop();
+}
+
 async function testFreesoundFiltersAndSnapshot() {
   const storage = new Map();
   const localStorage = {
@@ -247,6 +382,7 @@ function testDetectionDiagnosticsMarkup() {
 (async () => {
   await testSelector();
   await testCandidateStateConfirmation();
+  await testManualModeDoesNotSnapOnExit();
   await testLibraryAndLoopCount();
   await testFreesoundFiltersAndSnapshot();
   testDetectionDiagnosticsMarkup();
