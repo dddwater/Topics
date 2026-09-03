@@ -616,6 +616,16 @@ body {
   color: var(--accent);
 }
 
+.vibe-mode-caption {
+  margin: 0.6rem auto 0;
+  max-width: 420px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 @media (max-height: 900px) {
   .vibe-track {
     height: 2rem;
