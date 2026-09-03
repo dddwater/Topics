@@ -416,12 +416,46 @@ body {
 }
 
 .vibe-diagnostics {
-  display: none !important;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(680px, calc(100% - 32px));
+  margin: 0.35rem auto 0;
+  padding: 0.75rem 1rem;
+  gap: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: rgba(18, 20, 28, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: inset 0 1px 12px rgba(240, 238, 234, 0.03), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.vibe-diagnostics > div {
+  min-width: 0;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.vibe-diagnostics dt {
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.vibe-diagnostics dd {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.88rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 640px) {
   .vibe-diagnostics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0.6rem 0.85rem;
   }
 }
 
