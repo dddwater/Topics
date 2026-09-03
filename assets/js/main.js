@@ -292,6 +292,10 @@
   const modeButtons = Array.from(document.querySelectorAll("[data-vibe-mode]"));
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
+  const candidateLabel = document.getElementById("vibeCandidate");
+  const confirmationLabel = document.getElementById("vibeConfirmation");
+  const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
+  const playingEnergyLabel = document.getElementById("vibePlayingEnergy");
 
   const IDLE_HEIGHT = 5;
   const MAX_HEIGHT = 34;
@@ -302,6 +306,7 @@
     transient: "Transient · 短暫事件",
     uncertain: "Uncertain · 等待確認",
   };
+  const ENERGY_LABELS = { low: "Quiet", medium: "Social", high: "Busy" };
 
   let active = false;
   let simTimer = null;
@@ -328,15 +333,28 @@
 
   function renderDecision(decision, context = {}) {
     if (!decision) return;
-    const pendingLabels = { low: "Quiet", medium: "Social", high: "Busy" };
     const pending = context.activeEnergy && decision.energy !== context.activeEnergy
-      ? ` ・ 下一首將切換為 ${pendingLabels[decision.energy] || decision.energy}`
+      ? ` ・ 下一首將切換為 ${ENERGY_LABELS[decision.energy] || decision.energy}`
       : "";
     status.textContent = `${STATE_LABELS[decision.state] || decision.state} ・ ${decision.reason}${pending}`;
+
+    const candidate = decision.candidateState || decision.state;
+    if (candidateLabel) candidateLabel.textContent = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
+    if (confirmationLabel) {
+      confirmationLabel.textContent = decision.reasonCode === "STATE_CONFIRMING"
+        ? `${Math.min(decision.confirmationSeconds, Math.floor(decision.candidateSeconds))} / ${decision.confirmationSeconds} 秒`
+        : "已確認";
+    }
+    if (detectedEnergyLabel) {
+      detectedEnergyLabel.textContent = ENERGY_LABELS[decision.energy] || decision.energy;
+    }
   }
 
-  function renderTrack(meta) {
+  function renderTrack(meta, context = {}) {
     if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
+    if (playingEnergyLabel && context.energy) {
+      playingEnergyLabel.textContent = ENERGY_LABELS[context.energy] || context.energy;
+    }
   }
 
   function setActiveMode(mode) {
@@ -400,6 +418,10 @@
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
+    if (candidateLabel) candidateLabel.textContent = "尚未偵測";
+    if (confirmationLabel) confirmationLabel.textContent = "—";
+    if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
+    if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
 
     await window.VibeAudioEngine?.stop?.();
     stopSimulation();
@@ -423,7 +445,7 @@
   skipButton?.addEventListener("click", async () => {
     if (!active) return;
     const meta = await window.VibeAudioEngine?.skipTrack?.();
-    if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
+    if (meta) renderTrack(meta);
   });
 
   const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();
