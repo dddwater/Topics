@@ -204,11 +204,21 @@ async function testFreesoundFiltersAndSnapshot() {
   assert.throws(() => api.saveLicenseSnapshot({ ...candidates[0], license: "Attribution" }));
 }
 
+function testDetectionDiagnosticsMarkup() {
+  const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  for (const id of ["vibeCandidate", "vibeConfirmation", "vibeDetectedEnergy", "vibePlayingEnergy"]) {
+    assert.match(index, new RegExp(`id=["']${id}["']`), `${id} should be visible on the player page`);
+  }
+  assert.match(index, /main\.js\?v=classification-diagnostics-1/, "main.js cache key should be refreshed");
+  assert.match(index, /main\.css\?v=classification-diagnostics-3/, "main.css cache key should be refreshed");
+}
+
 (async () => {
   await testSelector();
   await testCandidateStateConfirmation();
   await testLibraryAndLoopCount();
   await testFreesoundFiltersAndSnapshot();
+  testDetectionDiagnosticsMarkup();
   console.log("audio selection tests passed");
 })().catch((error) => {
   console.error(error);
