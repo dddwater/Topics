@@ -376,7 +376,7 @@ function testDetectionDiagnosticsMarkup() {
     assert.match(index, new RegExp(`id=["']${id}["']`), `${id} should be visible on the player page`);
   }
   assert.match(index, /main\.js\?v=track-label-genre-1/, "main.js cache key should be refreshed");
-  assert.match(index, /main\.css\?v=diagnostic-card-5/, "main.css cache key should be refreshed");
+  assert.match(index, /main\.css\?v=scroll-fix-1/, "main.css cache key should be refreshed");
 }
 
 (async () => {
