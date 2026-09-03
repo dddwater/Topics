@@ -65,14 +65,22 @@
     if (delta >= busyThreshold) candidate = "busy";
     if (delta <= quietThreshold) candidate = "quiet";
 
-    const confirmationSeconds = candidate === "social" ? 22 : 38;
-    if (candidate !== currentState && sustainedSeconds < confirmationSeconds) {
-      return hold(
+    const confirmationSeconds = candidate === "social" ? 8 : 10;
+    const candidateSeconds = candidate === input.candidateState
+      ? Math.max(0, input.candidateSeconds || 0)
+      : 0;
+    if (candidate !== currentState && candidateSeconds < confirmationSeconds) {
+      return {
+        ...hold(
         currentState,
         "STATE_CONFIRMING",
-        `${candidate === "busy" ? "活動升高" : candidate === "quiet" ? "空間轉靜" : "聲況回穩"}尚在確認中（${Math.round(sustainedSeconds)} / ${confirmationSeconds} 秒）。`,
+        `${candidate === "busy" ? "活動升高" : candidate === "quiet" ? "空間轉靜" : "聲況回穩"}尚在確認中（${Math.round(candidateSeconds)} / ${confirmationSeconds} 秒）。`,
         input.dataQuality * 0.72,
-      );
+        ),
+        candidateState: candidate,
+        candidateSeconds,
+        confirmationSeconds,
+      };
     }
 
     let targetGainDb = calibration.preferredGainDb;
@@ -123,6 +131,9 @@
       confidence: round(clamp(input.dataQuality * (0.7 + Math.min(0.3, sustainedSeconds / 180)), 0, 1), 2),
       reasonCode,
       reason,
+      candidateState: candidate,
+      candidateSeconds,
+      confirmationSeconds,
     };
   }
 
@@ -136,3 +147,4 @@
 
   window.VibeSpaceContextEngine = { decideContext, DEFAULT_CALIBRATION };
 })();
+
