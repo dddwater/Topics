@@ -413,7 +413,13 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  width: min(650px, calc(100% - 32px));
+  /* Fits its content instead of a fixed wide bar — most of the time only
+     the "目前狀態" row shows, and a 650px slab around one short line of
+     text read as an oversized, half-empty box. max-width still caps it
+     for the (rarer) 3-row transition state and small viewports. */
+  width: fit-content;
+  min-width: 220px;
+  max-width: min(560px, calc(100% - 32px));
   margin: 0.4rem auto 0;
   padding: 10px 14px;
   gap: 8px;

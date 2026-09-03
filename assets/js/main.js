@@ -395,7 +395,14 @@
   }
 
   function renderTrack(meta, context = {}) {
-    if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
+    if (meta && trackLabel) {
+      // meta.subtitle is always "{Quiet/Social/Busy} · {genre}" (see
+      // soundscape-player.js's TRACKS data) — the energy word is already
+      // shown in the 目前狀態 box above, so repeating it here just reads
+      // as an unlabeled third "· something" segment. Show title + genre only.
+      const genre = meta.subtitle?.split(" · ")[1] || meta.subtitle;
+      trackLabel.textContent = genre ? `${meta.title} · ${genre}` : meta.title;
+    }
     if (context.energy) {
       const playingLabel = ENERGY_LABELS[context.energy] || context.energy;
       if (playingEnergyLabel) playingEnergyLabel.textContent = playingLabel;
