@@ -441,17 +441,10 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-/* Rows come and go (see assets/js/main.js) as the underlying state changes,
-   so this is flex rather than a fixed-column grid — a grid would reserve
-   empty tracks for hidden rows and leave the visible one stranded off-center. */
 .vibe-diagnostics > div {
   min-width: 0;
   padding: 4px 12px;
   text-align: center;
-}
-
-.vibe-diagnostics > div:not(:first-child) {
-  border-left: 1px solid rgba(216, 195, 160, 0.1);
 }
 
 .vibe-diagnostics dt {

@@ -372,11 +372,19 @@ async function testFreesoundFiltersAndSnapshot() {
 
 function testDetectionDiagnosticsMarkup() {
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  for (const id of ["vibeCandidate", "vibeConfirmation", "vibeDetectedEnergy", "vibePlayingEnergy"]) {
+  // vibeCandidate/vibeConfirmation were removed: during STATE_CONFIRMING the
+  // status line's decision.reason already spells out the same candidate +
+  // countdown in prose (e.g. "Quiet · 空間轉靜尚在確認中（7 / 10 秒）"), so
+  // the separate 偵測中/確認倒數 stat boxes were showing the same two facts
+  // twice. 目前狀態/播放曲目 stay since they're the diagnostics box's only
+  // remaining, non-redundant content.
+  for (const id of ["vibeDetectedEnergy", "vibePlayingEnergy"]) {
     assert.match(index, new RegExp(`id=["']${id}["']`), `${id} should be visible on the player page`);
   }
-  assert.match(index, /main\.js\?v=track-label-genre-1/, "main.js cache key should be refreshed");
-  assert.match(index, /main\.css\?v=scroll-fix-1/, "main.css cache key should be refreshed");
+  assert.doesNotMatch(index, /id=["']vibeCandidate["']/, "candidate row should stay removed (redundant with the status line)");
+  assert.doesNotMatch(index, /id=["']vibeConfirmation["']/, "confirmation row should stay removed (redundant with the status line)");
+  assert.match(index, /main\.js\?v=status-line-dedup-1/, "main.js cache key should be refreshed");
+  assert.match(index, /main\.css\?v=status-line-dedup-1/, "main.css cache key should be refreshed");
 }
 
 (async () => {
