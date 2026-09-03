@@ -291,9 +291,12 @@
   const modeButtons = Array.from(document.querySelectorAll("[data-vibe-mode]"));
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
+  const candidateRow = document.getElementById("vibeCandidateRow");
   const candidateLabel = document.getElementById("vibeCandidate");
+  const confirmationRow = document.getElementById("vibeConfirmationRow");
   const confirmationLabel = document.getElementById("vibeConfirmation");
   const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
+  const playingRow = document.getElementById("vibePlayingRow");
   const playingEnergyLabel = document.getElementById("vibePlayingEnergy");
 
   const IDLE_HEIGHT = 5;
@@ -311,6 +314,23 @@
   let active = false;
   let simTimer = null;
   let phase = 0;
+  // The "candidate/confirming" and "playing track" rows only carry real
+  // information when they diverge from the always-visible "目前狀態" row
+  // (i.e. during a live transition, or the brief lag while the current
+  // track finishes before the category actually switches). Otherwise all
+  // three rows show the same Quiet/Social/Busy label and just look like
+  // duplicate boxes, so they stay hidden until they say something new.
+  let lastDetectedEnergyLabel = null;
+  let lastPlayingEnergyLabel = null;
+
+  function updatePlayingRowVisibility() {
+    if (!playingRow) return;
+    playingRow.hidden = !(
+      lastDetectedEnergyLabel != null
+      && lastPlayingEnergyLabel != null
+      && lastPlayingEnergyLabel !== lastDetectedEnergyLabel
+    );
+  }
 
   const weights = bars.map((_, i) => {
     const center = (bars.length - 1) / 2;
@@ -338,27 +358,36 @@
       ? rawCandidate
       : STATE_BY_ENERGY[decision.energy] || "social";
     const candidateName = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
-    if (decision.reasonCode === "STATE_CONFIRMING") {
+    const isConfirming = decision.reasonCode === "STATE_CONFIRMING";
+    if (isConfirming) {
       status.textContent = `${candidateName} · ${decision.reason}`;
     } else {
       status.textContent = candidateName;
     }
 
-    if (candidateLabel) candidateLabel.textContent = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
+    if (candidateRow) candidateRow.hidden = !isConfirming;
+    if (confirmationRow) confirmationRow.hidden = !isConfirming;
+    if (candidateLabel) candidateLabel.textContent = candidateName;
     if (confirmationLabel) {
-      confirmationLabel.textContent = decision.reasonCode === "STATE_CONFIRMING"
+      confirmationLabel.textContent = isConfirming
         ? `${Math.min(decision.confirmationSeconds, Math.floor(decision.candidateSeconds))} / ${decision.confirmationSeconds} 秒`
         : "已確認";
     }
     if (detectedEnergyLabel) {
-      detectedEnergyLabel.textContent = ENERGY_LABELS[decision.energy] || decision.energy;
+      const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
+      detectedEnergyLabel.textContent = detectedLabel;
+      lastDetectedEnergyLabel = detectedLabel;
+      updatePlayingRowVisibility();
     }
   }
 
   function renderTrack(meta, context = {}) {
     if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
-    if (playingEnergyLabel && context.energy) {
-      playingEnergyLabel.textContent = ENERGY_LABELS[context.energy] || context.energy;
+    if (context.energy) {
+      const playingLabel = ENERGY_LABELS[context.energy] || context.energy;
+      if (playingEnergyLabel) playingEnergyLabel.textContent = playingLabel;
+      lastPlayingEnergyLabel = playingLabel;
+      updatePlayingRowVisibility();
     }
   }
 
@@ -421,10 +450,15 @@
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
+    if (candidateRow) candidateRow.hidden = true;
     if (candidateLabel) candidateLabel.textContent = "尚未偵測";
+    if (confirmationRow) confirmationRow.hidden = true;
     if (confirmationLabel) confirmationLabel.textContent = "—";
     if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
+    if (playingRow) playingRow.hidden = true;
     if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
+    lastDetectedEnergyLabel = null;
+    lastPlayingEnergyLabel = null;
 
     await window.VibeAudioEngine?.stop?.();
     stopSimulation();
