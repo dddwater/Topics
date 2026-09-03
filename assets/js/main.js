@@ -289,11 +289,17 @@
   const meter = document.querySelector(".vibe-meter");
   const bars = Array.from(document.querySelectorAll(".vibe-meter__bar"));
   const modeButtons = Array.from(document.querySelectorAll("[data-vibe-mode]"));
+  const modeCaption = document.getElementById("vibeModeCaption");
+  const modeDetailsToggle = document.getElementById("vibeModeDetailsToggle");
+  const modeDetailsPanel = document.getElementById("vibeModeDetailsPanel");
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
+  const candidateRow = document.getElementById("vibeCandidateRow");
   const candidateLabel = document.getElementById("vibeCandidate");
+  const confirmationRow = document.getElementById("vibeConfirmationRow");
   const confirmationLabel = document.getElementById("vibeConfirmation");
   const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
+  const playingRow = document.getElementById("vibePlayingRow");
   const playingEnergyLabel = document.getElementById("vibePlayingEnergy");
 
   const IDLE_HEIGHT = 5;
@@ -307,10 +313,37 @@
   };
   const ENERGY_LABELS = { low: "Quiet", medium: "Social", high: "Busy" };
   const STATE_BY_ENERGY = { low: "quiet", medium: "social", high: "busy" };
+  // Comfort/Balanced/Flow only diverge from each other once the room is
+  // actually confirmed Busy (see context-engine.js) — in a quiet room they
+  // all behave identically, which is easy to mistake for "these buttons
+  // don't do anything." Spell out the intent so it's not invisible.
+  const MODE_COPY = {
+    comfort: "談話舒適優先：忙碌時只做最小音量補償，不追逐現場噪音。",
+    balanced: "穩定與活力平衡：預設模式，依現場狀況適度調整音量與能量。",
+    flow: "尖峰流動優先：忙碌時較積極提高音量，並更快切換到有活力的曲目。",
+    manual: "手動控制：系統暫停自動判斷，改用「下一首」自行切換曲目類別。",
+  };
 
   let active = false;
   let simTimer = null;
   let phase = 0;
+  // The "candidate/confirming" and "playing track" rows only carry real
+  // information when they diverge from the always-visible "目前狀態" row
+  // (i.e. during a live transition, or the brief lag while the current
+  // track finishes before the category actually switches). Otherwise all
+  // three rows show the same Quiet/Social/Busy label and just look like
+  // duplicate boxes, so they stay hidden until they say something new.
+  let lastDetectedEnergyLabel = null;
+  let lastPlayingEnergyLabel = null;
+
+  function updatePlayingRowVisibility() {
+    if (!playingRow) return;
+    playingRow.hidden = !(
+      lastDetectedEnergyLabel != null
+      && lastPlayingEnergyLabel != null
+      && lastPlayingEnergyLabel !== lastDetectedEnergyLabel
+    );
+  }
 
   const weights = bars.map((_, i) => {
     const center = (bars.length - 1) / 2;
@@ -338,27 +371,43 @@
       ? rawCandidate
       : STATE_BY_ENERGY[decision.energy] || "social";
     const candidateName = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
-    if (decision.reasonCode === "STATE_CONFIRMING") {
+    const isConfirming = decision.reasonCode === "STATE_CONFIRMING";
+    if (isConfirming) {
       status.textContent = `${candidateName} · ${decision.reason}`;
     } else {
       status.textContent = candidateName;
     }
 
-    if (candidateLabel) candidateLabel.textContent = STATE_LABELS[candidate]?.split(" · ")[0] || candidate;
+    if (candidateRow) candidateRow.hidden = !isConfirming;
+    if (confirmationRow) confirmationRow.hidden = !isConfirming;
+    if (candidateLabel) candidateLabel.textContent = candidateName;
     if (confirmationLabel) {
-      confirmationLabel.textContent = decision.reasonCode === "STATE_CONFIRMING"
+      confirmationLabel.textContent = isConfirming
         ? `${Math.min(decision.confirmationSeconds, Math.floor(decision.candidateSeconds))} / ${decision.confirmationSeconds} 秒`
         : "已確認";
     }
     if (detectedEnergyLabel) {
-      detectedEnergyLabel.textContent = ENERGY_LABELS[decision.energy] || decision.energy;
+      const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
+      detectedEnergyLabel.textContent = detectedLabel;
+      lastDetectedEnergyLabel = detectedLabel;
+      updatePlayingRowVisibility();
     }
   }
 
   function renderTrack(meta, context = {}) {
-    if (meta && trackLabel) trackLabel.textContent = `${meta.title} · ${meta.subtitle}`;
-    if (playingEnergyLabel && context.energy) {
-      playingEnergyLabel.textContent = ENERGY_LABELS[context.energy] || context.energy;
+    if (meta && trackLabel) {
+      // meta.subtitle is always "{Quiet/Social/Busy} · {genre}" (see
+      // soundscape-player.js's TRACKS data) — the energy word is already
+      // shown in the 目前狀態 box above, so repeating it here just reads
+      // as an unlabeled third "· something" segment. Show title + genre only.
+      const genre = meta.subtitle?.split(" · ")[1] || meta.subtitle;
+      trackLabel.textContent = genre ? `${meta.title} · ${genre}` : meta.title;
+    }
+    if (context.energy) {
+      const playingLabel = ENERGY_LABELS[context.energy] || context.energy;
+      if (playingEnergyLabel) playingEnergyLabel.textContent = playingLabel;
+      lastPlayingEnergyLabel = playingLabel;
+      updatePlayingRowVisibility();
     }
   }
 
@@ -366,6 +415,7 @@
     modeButtons.forEach((button) => {
       button.classList.toggle("is-active", button.dataset.vibeMode === mode);
     });
+    if (modeCaption) modeCaption.textContent = MODE_COPY[mode] || "";
   }
 
   function startSimulation() {
@@ -421,10 +471,15 @@
     status.textContent = "尚未啟動";
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
+    if (candidateRow) candidateRow.hidden = true;
     if (candidateLabel) candidateLabel.textContent = "尚未偵測";
+    if (confirmationRow) confirmationRow.hidden = true;
     if (confirmationLabel) confirmationLabel.textContent = "—";
     if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
+    if (playingRow) playingRow.hidden = true;
     if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
+    lastDetectedEnergyLabel = null;
+    lastPlayingEnergyLabel = null;
 
     await window.VibeAudioEngine?.stop?.();
     stopSimulation();
@@ -449,6 +504,14 @@
     if (!active) return;
     const meta = await window.VibeAudioEngine?.skipTrack?.();
     if (meta) renderTrack(meta);
+  });
+
+  modeDetailsToggle?.addEventListener("click", () => {
+    if (!modeDetailsPanel) return;
+    const expanded = !modeDetailsPanel.hidden;
+    modeDetailsPanel.hidden = expanded;
+    modeDetailsToggle.setAttribute("aria-expanded", String(!expanded));
+    modeDetailsToggle.textContent = expanded ? "查看四種模式的差異 ▾" : "收起說明 ▴";
   });
 
   const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();

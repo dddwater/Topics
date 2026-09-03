@@ -6,7 +6,7 @@
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="assets/images/vibespace-icon.png" />
   <title>VibeSpace</title>
-  <link rel="stylesheet" href="assets/css/main.css?v=diagnostic-card-1" />
+  <link rel="stylesheet" href="assets/css/main.css?v=diagnostic-card-5" />
 </head>
 <body>
   <div class="vibe-bg">
@@ -49,10 +49,15 @@
     <p class="vibe-status" id="vibeStatus">尚未啟動</p>
 
     <dl class="vibe-diagnostics" id="vibeDiagnostics" aria-live="polite">
-      <div><dt>候選環境</dt><dd id="vibeCandidate">尚未偵測</dd></div>
-      <div><dt>確認進度</dt><dd id="vibeConfirmation">—</dd></div>
-      <div><dt>已判定類別</dt><dd id="vibeDetectedEnergy">Social</dd></div>
-      <div><dt>目前曲目類別</dt><dd id="vibePlayingEnergy">尚未播放</dd></div>
+      <div>
+        <dt>目前狀態</dt>
+        <dd>
+          <span id="vibeDetectedEnergy">Social</span>
+          <span id="vibePlayingRow" class="vibe-diagnostics__note" hidden>· 目前仍播放 <span id="vibePlayingEnergy">尚未播放</span></span>
+        </dd>
+      </div>
+      <div id="vibeCandidateRow" hidden><dt>偵測中</dt><dd id="vibeCandidate">尚未偵測</dd></div>
+      <div id="vibeConfirmationRow" hidden><dt>確認倒數</dt><dd id="vibeConfirmation">—</dd></div>
     </dl>
 
     <div class="vibe-track" aria-live="polite">
@@ -65,6 +70,24 @@
       <button type="button" class="vibe-mode" data-vibe-mode="balanced">Balanced</button>
       <button type="button" class="vibe-mode" data-vibe-mode="flow">Flow</button>
       <button type="button" class="vibe-mode" data-vibe-mode="manual">Manual</button>
+    </div>
+    <p class="vibe-mode-caption" id="vibeModeCaption" aria-live="polite"></p>
+    <button type="button" class="vibe-mode-details-toggle" id="vibeModeDetailsToggle" aria-expanded="false" aria-controls="vibeModeDetailsPanel">
+      查看四種模式的差異 ▾
+    </button>
+    <div class="vibe-mode-details" id="vibeModeDetailsPanel" hidden>
+      <p class="vibe-mode-details__intro">四種模式只有在現場被判定為 <strong>Busy</strong> 時才會表現不同；安靜或一般交談時，四種模式完全一樣。</p>
+      <table class="vibe-mode-details__table">
+        <thead>
+          <tr><th scope="col">模式</th><th scope="col">忙碌時音量調整</th><th scope="col">忙碌時是否換成有活力的曲風</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Comfort</th><td>固定只加 0.6 dB，幾乎不變</td><td>不換，維持原本輕鬆的曲風</td></tr>
+          <tr><th scope="row">Balanced（預設）</th><td>依熱鬧程度按比例加，0.8–2.8 dB</td><td>會換，下一首切成較有活力的曲風</td></tr>
+          <tr><th scope="row">Flow</th><td>依熱鬧程度按比例加，1.5–4 dB（約 Balanced 的 1.4 倍）</td><td>會換，反應比 Balanced 更快更積極</td></tr>
+          <tr><th scope="row">Manual</th><td colspan="2">完全暫停自動判斷，音量與曲風都不會自動變化，只能用「下一首」手動切換</td></tr>
+        </tbody>
+      </table>
     </div>
   </main>
 
@@ -82,7 +105,7 @@
   <script src="assets/js/soundscape-player.js?v=classification-diagnostics-1"></script>
   <script src="assets/js/track-selector.js"></script>
   <script src="assets/js/freesound-candidates.js"></script>
-  <script src="assets/js/main.js?v=candidate-status-3"></script>
+  <script src="assets/js/main.js?v=track-label-genre-1"></script>
   <script src="assets/js/session-recorder.js"></script>
 </body>
 </html>
