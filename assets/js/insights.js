@@ -32,12 +32,13 @@
     return x - Math.floor(x);
   };
 
-  // Demo history covering a week of opening hours, used until real event
-  // logs accumulate. Each slice is one hour of one day.
+  // Demo history covering a full week, used until real event logs
+  // accumulate. Each slice is one hour of one day, all 24 hours included
+  // since venues aren't assumed to keep any particular opening hours.
   function createDemoHistory() {
     const rows = [];
     for (let day = 0; day < 7; day += 1) {
-      for (let hour = 8; hour < 20; hour += 1) {
+      for (let hour = 0; hour < 24; hour += 1) {
         const lunch = hour >= 11 && hour <= 13;
         const afternoon = hour >= 14 && hour <= 16;
         const weekend = day >= 5;
