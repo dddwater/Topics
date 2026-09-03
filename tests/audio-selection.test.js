@@ -69,24 +69,34 @@ async function testLibraryAndLoopCount() {
     }
   }
 
+  // "medium" index 4 (calm-loop.mp3) is the only track flagged `loop: true`
+  // (a genuine ~19s ambient bed). Only loop-flagged tracks replay in place;
+  // regular full-length songs play once and move on (see below).
   let completed = null;
   const player = new api.SoundscapePlayer({ random: () => 0, onTrackCycleComplete: (event) => { completed = event; } });
-  await player.play("low", -24, 0);
+  await player.play("medium", -24, 4);
   player.active.audio.listeners.ended();
-  assert.equal(completed, null, "two-loop track must replay after the first ending");
+  assert.equal(completed, null, "loop-flagged track must replay after the first ending");
   player.active.audio.listeners.ended();
   assert.equal(completed.loops, 2);
   await player.destroy();
 
   const threeLoopPlayer = new api.SoundscapePlayer({ random: () => 0.999, onTrackCycleComplete: (event) => { completed = event; } });
   completed = null;
-  await threeLoopPlayer.play("high", -24, 0);
+  await threeLoopPlayer.play("medium", -24, 4);
   threeLoopPlayer.active.audio.listeners.ended();
   threeLoopPlayer.active.audio.listeners.ended();
   assert.equal(completed, null);
   threeLoopPlayer.active.audio.listeners.ended();
   assert.equal(completed.loops, 3);
   await threeLoopPlayer.destroy();
+
+  let regularCompleted = null;
+  const regularPlayer = new api.SoundscapePlayer({ random: () => 0.999, onTrackCycleComplete: (event) => { regularCompleted = event; } });
+  await regularPlayer.play("high", -24, 0);
+  regularPlayer.active.audio.listeners.ended();
+  assert.equal(regularCompleted?.loops, 1, "a regular (non-loop) track must move on after a single play, not repeat");
+  await regularPlayer.destroy();
 
   const singleTrackPlayer = new api.SoundscapePlayer({ random: () => 0 });
   await singleTrackPlayer.play("medium", -24, 0);

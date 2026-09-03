@@ -8,6 +8,7 @@
   const { NonRepeatingTrackSelector } = window.VibeSpaceTrackSelection;
 
   const STORAGE_KEY = "vibespace.spaceSettings";
+  const VALID_OPERATION_MODES = ["comfort", "balanced", "flow", "manual"];
   const DEFAULT_PROFILE = {
     id: "automatic",
     name: "自動偵測",
@@ -101,6 +102,10 @@
           localStorage.removeItem(STORAGE_KEY);
           return { profile: null, operationMode: "balanced" };
         }
+        const operationMode = VALID_OPERATION_MODES.includes(saved?.operationMode)
+          ? saved.operationMode
+          : "balanced";
+        return { profile: null, operationMode };
       }
       return { profile: null, operationMode: "balanced" };
     } catch (error) {
@@ -262,10 +267,12 @@
     microphoneSource = null;
     microphoneStream?.getTracks().forEach((track) => track.stop());
     microphoneStream = null;
-    if (audioContext && audioContext.state !== "closed") await audioContext.close();
+    if (audioContext && audioContext.state !== "closed") {
+      await audioContext.close().catch((error) => console.error("audioContext.close() failed", error));
+    }
     audioContext = null;
     analyser = null;
-    await player?.destroy();
+    await player?.destroy().catch((error) => console.error("player.destroy() failed", error));
     player = null;
     onLevel = null;
     onDecision = null;
@@ -476,7 +483,11 @@
     lastDetectedEnergyLabel = null;
     lastPlayingEnergyLabel = null;
 
-    await window.VibeAudioEngine?.stop?.();
+    try {
+      await window.VibeAudioEngine?.stop?.();
+    } catch (error) {
+      console.error("VibeAudioEngine.stop() failed; continuing cleanup", error);
+    }
     stopSimulation();
     reset();
     window.dispatchEvent(new CustomEvent("vibespace:session-stop"));
