@@ -65,7 +65,7 @@
     if (delta >= busyThreshold) candidate = "busy";
     if (delta <= quietThreshold) candidate = "quiet";
 
-    const confirmationSeconds = candidate === "social" ? 8 : 10;
+    const confirmationSeconds = 10;
     const candidateSeconds = candidate === input.candidateState
       ? Math.max(0, input.candidateSeconds || 0)
       : 0;
@@ -74,7 +74,7 @@
         ...hold(
         currentState,
         "STATE_CONFIRMING",
-        `${candidate === "busy" ? "活動升高" : candidate === "quiet" ? "空間轉靜" : "聲況回穩"}尚在確認中（${Math.round(candidateSeconds)} / ${confirmationSeconds} 秒）。`,
+        `${candidate === "quiet" ? "空間轉靜" : "活動升高"}尚在確認中（${Math.round(candidateSeconds)} / ${confirmationSeconds} 秒）`,
         input.dataQuality * 0.72,
         ),
         candidateState: candidate,

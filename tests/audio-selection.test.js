@@ -141,6 +141,7 @@ async function testCandidateStateConfirmation() {
   assert.equal(firstQuiet.state, "social");
   assert.equal(firstQuiet.candidateState, "quiet");
   assert.equal(firstQuiet.candidateSeconds, 0, "a new candidate must start its own timer");
+  assert.equal(firstQuiet.reason, "空間轉靜尚在確認中（0 / 10 秒）");
 
   const confirmingQuiet = decideContext({ ...base, candidateState: "quiet", candidateSeconds: 9 });
   assert.equal(confirmingQuiet.state, "social");
@@ -159,6 +160,36 @@ async function testCandidateStateConfirmation() {
   });
   assert.equal(confirmedBusy.state, "busy");
   assert.equal(confirmedBusy.energy, "high");
+
+  const confirmingBusy = decideContext({
+    ...base,
+    shortTermDbRel: -28,
+    longTermDbRel: -28,
+    candidateState: "busy",
+    candidateSeconds: 9,
+  });
+  assert.equal(confirmingBusy.reason, "活動升高尚在確認中（9 / 10 秒）");
+
+  const confirmingSocial = decideContext({
+    ...base,
+    shortTermDbRel: -36,
+    longTermDbRel: -36,
+    currentState: "quiet",
+    candidateState: "social",
+    candidateSeconds: 9,
+  });
+  assert.equal(confirmingSocial.reasonCode, "STATE_CONFIRMING");
+  assert.equal(confirmingSocial.reason, "活動升高尚在確認中（9 / 10 秒）");
+
+  const confirmedSocial = decideContext({
+    ...base,
+    shortTermDbRel: -36,
+    longTermDbRel: -36,
+    currentState: "quiet",
+    candidateState: "social",
+    candidateSeconds: 10,
+  });
+  assert.equal(confirmedSocial.state, "social");
 
   const comfortBusy = decideContext({ ...base, ...confirmedBusy, operationMode: "comfort" });
   assert.equal(comfortBusy.energy, "medium", "Comfort intentionally keeps busy rooms on Social energy");
@@ -209,7 +240,7 @@ function testDetectionDiagnosticsMarkup() {
   for (const id of ["vibeCandidate", "vibeConfirmation", "vibeDetectedEnergy", "vibePlayingEnergy"]) {
     assert.match(index, new RegExp(`id=["']${id}["']`), `${id} should be visible on the player page`);
   }
-  assert.match(index, /main\.js\?v=classification-diagnostics-1/, "main.js cache key should be refreshed");
+  assert.match(index, /main\.js\?v=candidate-status-3/, "main.js cache key should be refreshed");
   assert.match(index, /main\.css\?v=logout-button-2/, "main.css cache key should be refreshed");
 }
 
