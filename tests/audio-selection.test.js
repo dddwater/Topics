@@ -120,6 +120,50 @@ async function testLibraryAndLoopCount() {
   await boundaryPlayer.destroy();
 }
 
+async function testCandidateStateConfirmation() {
+  const window = loadScript("assets/js/context-engine.js");
+  const { decideContext, DEFAULT_CALIBRATION } = window.VibeSpaceContextEngine;
+  const base = {
+    shortTermDbRel: -50,
+    longTermDbRel: -50,
+    transientScore: 0,
+    dataQuality: 0.94,
+    sustainedSeconds: 120,
+    currentState: "social",
+    currentGainDb: DEFAULT_CALIBRATION.preferredGainDb,
+    operationMode: "balanced",
+    calibration: DEFAULT_CALIBRATION,
+    canChangeTrack: true,
+    manualHold: false,
+  };
+
+  const firstQuiet = decideContext({ ...base, candidateState: "social", candidateSeconds: 60 });
+  assert.equal(firstQuiet.state, "social");
+  assert.equal(firstQuiet.candidateState, "quiet");
+  assert.equal(firstQuiet.candidateSeconds, 0, "a new candidate must start its own timer");
+
+  const confirmingQuiet = decideContext({ ...base, candidateState: "quiet", candidateSeconds: 9 });
+  assert.equal(confirmingQuiet.state, "social");
+  assert.equal(confirmingQuiet.reasonCode, "STATE_CONFIRMING");
+
+  const confirmedQuiet = decideContext({ ...base, candidateState: "quiet", candidateSeconds: 10 });
+  assert.equal(confirmedQuiet.state, "quiet");
+  assert.equal(confirmedQuiet.energy, "low");
+
+  const confirmedBusy = decideContext({
+    ...base,
+    shortTermDbRel: -28,
+    longTermDbRel: -28,
+    candidateState: "busy",
+    candidateSeconds: 10,
+  });
+  assert.equal(confirmedBusy.state, "busy");
+  assert.equal(confirmedBusy.energy, "high");
+
+  const comfortBusy = decideContext({ ...base, ...confirmedBusy, operationMode: "comfort" });
+  assert.equal(comfortBusy.energy, "medium", "Comfort intentionally keeps busy rooms on Social energy");
+}
+
 async function testFreesoundFiltersAndSnapshot() {
   const storage = new Map();
   const localStorage = {
@@ -162,6 +206,7 @@ async function testFreesoundFiltersAndSnapshot() {
 
 (async () => {
   await testSelector();
+  await testCandidateStateConfirmation();
   await testLibraryAndLoopCount();
   await testFreesoundFiltersAndSnapshot();
   console.log("audio selection tests passed");
