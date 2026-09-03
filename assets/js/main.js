@@ -124,7 +124,19 @@
     };
   }
 
-  function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds) {
+  // dataQuality feeds context-engine.js's LOW_DATA_QUALITY safety hold, so it
+  // must reflect whether the mic signal is actually trustworthy: an
+  // ended/muted track (hardware unplugged, OS-level mute) or a signal that's
+  // essentially silent or clipped should not be treated as reliable input.
+  function computeDataQuality(rms) {
+    const track = microphoneStream?.getTracks?.()[0];
+    if (track && (track.readyState === "ended" || track.muted === true)) return 0.2;
+    if (rms < 0.00003) return 0.35;
+    if (rms > 0.9) return 0.4;
+    return 0.94;
+  }
+
+  function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds, dataQuality) {
     const decisionTime = Date.now();
     // Manual mode short-circuits decideContext before it ever updates the
     // candidate tracker, so a pending (unconfirmed) candidate from just
@@ -144,7 +156,7 @@
       shortTermDbRel,
       longTermDbRel,
       transientScore,
-      dataQuality: 0.94,
+      dataQuality,
       sustainedSeconds,
       currentState,
       currentGainDb,
@@ -193,8 +205,9 @@
     const spike = Math.max(0, db - smoothedLongTermDb);
     const transientScore = Math.min(1, spike / 11);
     const sustainedSeconds = Math.min(120, (Date.now() - startedAt) / 1000);
+    const dataQuality = computeDataQuality(rms);
 
-    const decision = runDecision(smoothedLongTermDb, db, transientScore, sustainedSeconds);
+    const decision = runDecision(smoothedLongTermDb, db, transientScore, sustainedSeconds, dataQuality);
     onLevel?.(Math.min(1, Math.max(0, (db + 60) / 60)), { rms, db, decision });
 
     animationFrameId = requestAnimationFrame(measure);

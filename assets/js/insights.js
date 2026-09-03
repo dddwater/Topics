@@ -58,6 +58,26 @@
     return rows;
   }
 
+  // Rounds each share to a whole percentage while guaranteeing they still sum
+  // to exactly 100 (largest-remainder method). Rounding quiet/social/busy
+  // independently can overshoot to 101 or undershoot to 99, which breaks any
+  // consumer that assumes the three segments tile a whole (e.g. a donut
+  // chart's conic-gradient stops).
+  function roundPercentagesTo100(counts, total) {
+    const keys = ["quiet", "social", "busy"];
+    const raw = keys.map((key) => (counts[key] / total) * 100);
+    const floored = raw.map(Math.floor);
+    const remainder = 100 - floored.reduce((sum, value) => sum + value, 0);
+    const order = keys
+      .map((key, index) => ({ key, frac: raw[index] - floored[index] }))
+      .sort((a, b) => b.frac - a.frac);
+    const result = Object.fromEntries(keys.map((key, index) => [key, floored[index]]));
+    for (let i = 0; i < remainder; i += 1) {
+      result[order[i % order.length].key] += 1;
+    }
+    return result;
+  }
+
   function summarizeHistory(history) {
     const counts = { quiet: 0, social: 0, busy: 0 };
     let transients = 0;
@@ -71,9 +91,7 @@
     });
     const total = Math.max(1, history.length);
     return {
-      quiet: Math.round((counts.quiet / total) * 100),
-      social: Math.round((counts.social / total) * 100),
-      busy: Math.round((counts.busy / total) * 100),
+      ...roundPercentagesTo100(counts, total),
       transients,
       adjustments,
       overrides,
