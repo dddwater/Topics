@@ -267,23 +267,56 @@
     line-height: 1.8;
   }
 
+  .plans-title {
+    font-size: clamp(1.3rem, 5vw, 1.8rem);
+    font-weight: 200;
+    letter-spacing: 0.08em;
+    color: var(--text-primary);
+    text-align: center;
+  }
+
+  .plans-subtitle {
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-size: clamp(0.75rem, 3.2vw, 0.86rem);
+    text-align: center;
+    line-height: 1.6;
+    padding: 0 0.5rem;
+    word-break: keep-all;
+  }
+
   @media (max-width: 640px) {
+    .eyebrow {
+      font-size: 0.72rem !important;
+      letter-spacing: 0.2em !important;
+      margin-bottom: 0.5rem !important;
+    }
+
     .hero h1 {
-      font-size: clamp(1.2rem, 5vw, 1.75rem);
+      font-size: clamp(1.3rem, 5.2vw, 1.7rem) !important;
       letter-spacing: 0.04em;
       white-space: nowrap;
     }
 
     .hero p {
-      font-size: 0.78rem;
-      letter-spacing: 0.1em;
+      font-size: clamp(0.72rem, 3.2vw, 0.82rem);
+      letter-spacing: 0.06em;
+      line-height: 1.6;
       word-break: keep-all;
+      padding: 0 0.75rem;
     }
-  }
 
-  @media (max-width: 380px) {
-    .hero h1 {
-      font-size: 1.15rem;
+    .plans-title {
+      font-size: clamp(1.25rem, 4.8vw, 1.5rem);
+      letter-spacing: 0.06em;
+    }
+
+    .plans-subtitle {
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      line-height: 1.5;
+      padding: 0 0.75rem;
+      word-break: keep-all;
     }
   }
 
@@ -1047,8 +1080,8 @@
 
     <!-- Subscription Plans Section -->
     <section class="pricing-section">
-      <h2 style="font-size: 1.8rem; font-weight: 200; letter-spacing: 0.08em; color: var(--text-primary);">訂閱方案與功能定價</h2>
-      <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.86rem;">全方案皆包含首月免費體驗與基礎 Web Audio 即時聲學引擎</p>
+      <h2 class="plans-title">訂閱方案與功能定價</h2>
+      <p class="plans-subtitle">全方案皆包含首月免費體驗與基礎 Web Audio 即時聲學引擎</p>
 
       <!-- Toggle Monthly / Yearly -->
       <div class="pricing-toggle">

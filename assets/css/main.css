@@ -225,22 +225,23 @@ body {
 }
 
 .vibe-hero {
+  margin-bottom: clamp(1rem, 2.5vh, 2.2rem);
   animation: rise 1.6s var(--ease) both;
 }
 
 .vibe-eyebrow {
   margin: 0 0 1.1rem;
   color: var(--accent);
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-weight: 400;
-  letter-spacing: 0.42em;
+  letter-spacing: 0.44em;
   text-transform: uppercase;
   opacity: 0.75;
 }
 
 .vibe-title {
   margin: 0;
-  font-size: clamp(2.75rem, 8vw, 5rem);
+  font-size: clamp(3rem, 8.5vw, 5.5rem);
   font-weight: 200;
   letter-spacing: 0.06em;
   line-height: 1;
@@ -249,8 +250,8 @@ body {
 .vibe-tagline {
   margin: 1.35rem 0 0;
   color: var(--text-muted);
-  font-size: 0.9rem;
-  letter-spacing: 0.22em;
+  font-size: 0.96rem;
+  letter-spacing: 0.24em;
 }
 
 @keyframes rise {
@@ -270,8 +271,8 @@ body {
 
 .vibe-orb {
   position: relative;
-  width: 168px;
-  height: 168px;
+  width: 176px;
+  height: 176px;
   border: 0;
   border-radius: 50%;
   background: var(--glass);
