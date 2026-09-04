@@ -515,28 +515,14 @@ body {
   transition: none;
 }
 
-/* Once actually playing, the full-size hero (eyebrow + giant title +
-   tagline) is pure repetition of the nav bar's own "VIBESPACE" brand mark,
+/* Once actually playing, the hero (eyebrow + giant title + tagline) is pure
+   repetition of the nav bar's own "VIBESPACE" brand mark — even shrunk to a
+   small wordmark it was still a duplicate line sitting right above the orb —
    and pushes the controls someone actually wants (orb, status, track, mode
-   buttons) below the fold on ordinary screen heights. Collapse it down to a
-   small wordmark, matching the nav brand's own styling, once the toggle is
-   pressed. */
+   buttons) below the fold on ordinary screen heights. Drop it entirely once
+   the toggle is pressed; the nav bar already carries the brand mark. */
 .vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-hero {
-  margin-bottom: 0.2rem;
-}
-
-.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-eyebrow,
-.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-tagline {
   display: none;
-}
-
-.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-title {
-  font-size: 0.78rem;
-  font-weight: 400;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  line-height: 1;
 }
 
 /* ---------- 響應式 ---------- */
