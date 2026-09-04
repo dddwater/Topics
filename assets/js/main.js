@@ -409,6 +409,15 @@
 
   function renderDecision(decision, context = {}) {
     if (!decision) return;
+    // TRANSIENT_IGNORED/LOW_DATA_QUALITY are deliberately meant to be
+    // invisible — context-engine.js holds the room state steady and doesn't
+    // touch the music for these. But decision.energy is forced to "medium"
+    // for both (it's neither "quiet" nor "busy"), which used to make the
+    // status text flash to "Social" for that one frame before snapping back
+    // — a real-feeling flicker every time a brief noise (a door, footsteps)
+    // ticked past the transient threshold. Leave the display exactly as it
+    // was instead of repainting it with a value nobody asked to see.
+    if (decision.state === "transient" || decision.state === "uncertain") return;
     const rawCandidate = decision.candidateState || decision.state;
     const candidate = ["quiet", "social", "busy"].includes(rawCandidate)
       ? rawCandidate

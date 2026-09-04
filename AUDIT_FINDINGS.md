@@ -51,6 +51,10 @@
 - [x] **選好的模式重整/新 session 後不會保留**（上游已修復，commit `3a83af4`）
   `loadSavedSettings()` 現在會用 `VALID_OPERATION_MODES` 白名單驗證後讀回 `saved.operationMode`。
 
+- [x] **狀態文字在瞬間噪音時會閃爍**（本次已修復，使用者截圖回報）— `main.js`（`renderDecision`）
+  這項不在原始稽核清單裡，是使用者實際使用時截圖回報「常常會一閃一閃的很難看」才發現。原因：`TRANSIENT_IGNORED`/`LOW_DATA_QUALITY` 這兩種「應該完全被忽略」的 tick，`decision.energy` 會被強制設成 `"medium"`，導致 UI 把它映射回 `"social"`，讓狀態文字在那一幀短暫閃成「Social」再跳回「Quiet」——現場只要有一點雜音（腳步聲、關門聲）就會常態性觸發。
+  → 修法：`renderDecision()` 在 `decision.state` 是 `"transient"`/`"uncertain"` 時直接跳過這次畫面更新，維持顯示上一個穩定狀態，音量指示條不受影響仍會照實反映音量。
+
 ## 🟡 中風險
 
 > 2026-09-04 demo 前二次更新：以下 5 項是從「上台 demo 給觀眾看」角度重新篩選、優先處理的（明顯會在畫面上出錯、有雜音、或會把人踢出登入頁），其餘中風險項目維持不動、demo 後再排時間處理。
