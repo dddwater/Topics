@@ -51,6 +51,14 @@
 - [x] **選好的模式重整/新 session 後不會保留**（上游已修復，commit `3a83af4`）
   `loadSavedSettings()` 現在會用 `VALID_OPERATION_MODES` 白名單驗證後讀回 `saved.operationMode`。
 
+- [x] **狀態文字在瞬間噪音時會閃爍**（本次已修復，使用者截圖回報）— `main.js`（`renderDecision`）
+  這項不在原始稽核清單裡，是使用者實際使用時截圖回報「常常會一閃一閃的很難看」才發現。原因：`TRANSIENT_IGNORED`/`LOW_DATA_QUALITY` 這兩種「應該完全被忽略」的 tick，`decision.energy` 會被強制設成 `"medium"`，導致 UI 把它映射回 `"social"`，讓狀態文字在那一幀短暫閃成「Social」再跳回「Quiet」——現場只要有一點雜音（腳步聲、關門聲）就會常態性觸發。
+  → 修法：`renderDecision()` 在 `decision.state` 是 `"transient"`/`"uncertain"` 時直接跳過這次畫面更新，維持顯示上一個穩定狀態，音量指示條不受影響仍會照實反映音量。
+
+- [x] **`main.js` 裡另一處過時註解 + Flow caption 重複「反應更快」的沒有依據的說法**（本次已修復）— `main.js`（`MODE_COPY` 上方）
+  跟 `index.html:87`（PR #40 已修）是同一類問題，但這裡是另一個獨立出處：程式碼註解還寫著「Comfort/Balanced/Flow 只有在 Busy 時才不同，安靜房間三者完全一樣」，跟現況（Quiet/Social 音量其實也有 1dB 差距）不符；Flow 的即時 caption 文字（`#vibeModeCaption`，按下 Flow 按鈕時畫面上顯示的說明）也寫著「並更快切換到有活力的曲目」，但 Flow 跟 Balanced 用同一套 10 秒確認窗跟門檻值，沒有比較快，只有音量幅度比較大。
+  → 修法：把註解改成準確描述現況（音量在每個狀態都有差，但差距很小、Busy 才會真的換曲風），Flow caption 拿掉「更快切換」，只保留「更積極提高音量，並換成有活力的曲目」。
+
 ## 🟡 中風險
 
 > 2026-09-04 demo 前二次更新：以下 5 項是從「上台 demo 給觀眾看」角度重新篩選、優先處理的（明顯會在畫面上出錯、有雜音、或會把人踢出登入頁），其餘中風險項目維持不動、demo 後再排時間處理。
@@ -67,6 +75,7 @@
 - [ ] **`main.js` 混雜引擎邏輯與 UI 綁定**（未覆核，架構建議）建議拆成 `audio-engine.js` + UI glue。純架構建議，不影響 demo。
 - [x] **「四種模式的差異」說明面板文案與表格已過時**（本次已修復）`index.html` — intro 那句「四種模式只有在 Busy 時才會表現不同；安靜或一般交談時，四種模式完全一樣」是錯的：`context-engine.js` 的 Quiet/Social 狀態下 Comfort/Balanced/Flow 三者音量其實也都不同（commit `3a83af4` 改的，但沒有同步更新這個說明面板）。另外表格裡「Flow 反應比 Balanced 更快」也沒有程式依據——兩者用同一套 10 秒確認窗與門檻值，Flow 只有「幅度」比較大，不是「速度」比較快。已刪除該句 intro，並把表格改成列出 Quiet/Social/Busy 三種狀態的音量調整，數字都對照程式碼核對過；「Flow 更快」的說法也拿掉。已用瀏覽器實測 320–900px 寬度下表格排版都不會溢出。
 - [ ] **start() 失敗後診斷欄位留著舊資料**（未覆核）`main.js:454`
+- [ ] **STATE_CONFIRMING 倒數在門檻邊緣可能反覆重置，畫面可能閃爍**（已確認，使用者同意先不修）`context-engine.js` — `candidateSeconds` 只要這一幀算出的候選狀態跟上一幀不同就會歸零重來；如果現場音量長時間卡在 busy/quiet 門檻邊緣（例如客人持續進場、音量慢慢逼近門檻），畫面可能在「Social」跟「Busy · 確認中（0/10秒）」之間反覆橫跳。跟今天修的「瞬間噪音閃爍」是同一種症狀但成因不同：這個是真的卡在門檻上，不是應該被忽略的雜訊，且 `longTermDbRel` 是慢速平滑值，實務發生機率比雜訊閃爍低很多。要修的話得改 `context-engine.js` 的核心判斷邏輯（例如候選狀態要連續偏離一段時間才真的歸零），不是單純 UI 層修法，先留著。
 - [ ] **隱藏的「聲學係數」悄悄縮放生產力提升%**（已確認）`pricing.html:1432` — 不同方案有 0.8/1.0/1.25 係數，UI 完全沒揭露。除非 demo 時會特別切換方案比較數字，否則不會被注意到。
 - [ ] **負數金額格式化不一致**（已確認）`pricing.html:1466` — 只有刻意示範「投報為負」的極端情境才會出現。
 
