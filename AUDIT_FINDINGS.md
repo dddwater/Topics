@@ -32,16 +32,21 @@
   切換「年繳方案」原本只改方案卡片顯示，`calculateROI()` 沒吃到那個折扣，ROI 數字跟月繳一樣。
   → 修法：`calculateROI()` 內的 `monthlyPlanCost` 依 `isYearly` 套用與價格卡片相同的 0.8 折扣係數。已驗證切換年繳後 `outAnnualGain` 數字確實改變。
 
-## 🔴 高風險（未覆核，僅單一審查員判斷，尚未修）
+## 🔴 高風險（原本未覆核，這次一併修復並補上回歸測試）
 
-- [ ] **transient/uncertain 狀態沒被完整忽略，可能誤觸換歌** — `main.js:180`（原稿標 163，現況行號已偏移）
-  `currentState` 有防護「瞬間噪音判定不採用」，但驅動換歌決策的 `latestDecisionEnergy` 沒有同樣防護。已重新核對現況程式碼，bug 仍在。
+- [x] **transient/uncertain 狀態沒被完整忽略，可能誤觸換歌**（本次已修復）— `main.js`
+  `currentState` 有防護「瞬間噪音判定不採用」，但驅動換歌決策的 `latestDecisionEnergy` 沒有同樣防護。
+  → 修法：把 `latestDecisionEnergy` 的賦值併入 `currentState` 那個既有的 guard，transient/uncertain 這種 tick 完全不更新它。新增回歸測試 `testTransientSpikeDoesNotSwitchCategory`（在真的 Busy 播放中注入一次瞬間尖峰，驗證曲目邊界事件不會被誤導去切到別的類別）。
 
-- [ ] **`start()` 失敗沒有清理，麥克風／AudioContext 會卡住** — `main.js:221`（原稿標 203，現況行號已偏移）
-  `player.play()` reject 時（例如瀏覽器自動播放政策擋下），已取得的資源不會釋放，下次點擊直接拋錯，需重整頁面才能恢復。已重新核對現況程式碼，bug 仍在。
+- [x] **`start()` 失敗沒有清理，麥克風／AudioContext 會卡住**（本次已修復）— `main.js`
+  `player.play()` reject 時（例如瀏覽器自動播放政策擋下），已取得的資源不會釋放，下次點擊直接拋錯，需重整頁面才能恢復。
+  → 修法：把資源取得到 `player.play()` 這段包進 try/catch，失敗時呼叫既有的 `stop()` 做完整清理再 rethrow。新增回歸測試 `testStartCleansUpAfterPlayFailure`（模擬第一次 play() reject，驗證麥克風被釋放、AudioContext 被關閉、且第二次呼叫 `start()` 真的能重試成功）。
 
-- [ ] **Manual 模式沒有完全凍結自動換歌** — `main.js:83`（`handleTrackCycleComplete` 沒有 `operationMode === "manual"` 的早退，`handleTrackEnded` 有）
-  目前曲目跑完 2-3 輪循環後，即使 Manual 模式還是會自動選下一首。已重新核對現況程式碼，bug 仍在。
+- [x] **Manual 模式沒有完全凍結自動換歌**（本次已修復）— `main.js`（`handleTrackCycleComplete`）
+  目前曲目跑完 2-3 輪循環後，即使 Manual 模式還是會自動選下一首；且原本的「未覆核」判斷低估了問題——真正的風險不是「有自動接歌」（完全靜音其實更糟），而是接歌時可能用到過期的 `latestDecisionEnergy`，導致 Manual 模式下悄悄跳到別的曲風類別。
+  → 修法：Manual 模式下強制 `nextEnergy = event.energy`（維持剛結束那首歌的類別），而不是用 `latestDecisionEnergy`——播放不中斷、也保證曲風不會自動跳類別。新增回歸測試 `testManualModeDoesNotAutoSwitchCategoryOnCycleComplete`（刻意製造 `latestDecisionEnergy` 與實際播放類別不一致的情境，驗證 Manual 模式下曲風不會被帶著跑）。
+
+三項回歸測試都先在還沒修的程式碼上跑過一次，確認真的會失敗，再套用修法確認轉綠——不是空測試。
 
 - [x] **選好的模式重整/新 session 後不會保留**（上游已修復，commit `3a83af4`）
   `loadSavedSettings()` 現在會用 `VALID_OPERATION_MODES` 白名單驗證後讀回 `saved.operationMode`。
@@ -83,7 +88,7 @@
 
 ## 測試涵蓋度
 
-- [ ] `tests/audio-selection.test.js`（未覆核）沒有測試涵蓋 `decideContext` 的 TRANSIENT_IGNORED / LOW_DATA_QUALITY 分支——正好是上面「main.js:163」那顆 bug 藏身的地方。
+- [x] `tests/audio-selection.test.js`（本次已補上）新增 `testTransientSpikeDoesNotSwitchCategory`，涵蓋 TRANSIENT_IGNORED 在真實曲目邊界事件上的效果（`testLowDataQualityHold` 先前已涵蓋 LOW_DATA_QUALITY 分支本身）。
 
 ## 建議優先順序
 

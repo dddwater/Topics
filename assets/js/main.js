@@ -85,7 +85,12 @@
       || event.energy !== player.activeEnergy
       || event.trackIndex !== player.activeTrackIndex) return;
 
-    const nextEnergy = latestDecisionEnergy;
+    // Manual mode must never auto-switch category ("曲風都不會自動變化"), but the
+    // track still has to keep playing once its loop cycle ends — silence isn't an
+    // option either. Force the same category so playback continues within it,
+    // ignoring latestDecisionEnergy (which tracks the ambient decision engine, not
+    // the operator's manual choice).
+    const nextEnergy = operationMode === "manual" ? event.energy : latestDecisionEnergy;
     const reason = nextEnergy === event.energy
       ? "cycle-complete"
       : "environment-change-after-cycle";
@@ -175,9 +180,9 @@
 
     if (decision.state !== "transient" && decision.state !== "uncertain") {
       currentState = decision.state;
+      latestDecisionEnergy = decision.energy;
     }
     if (candidateState === currentState) candidateStartedAt = decisionTime;
-    latestDecisionEnergy = decision.energy;
     currentGainDb = decision.targetGainDb;
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
@@ -246,24 +251,34 @@
     trackIndexes = { low: null, medium: null, high: null };
     trackSelector.reset();
 
-    microphoneStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
-    });
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
-    microphoneSource.connect(analyser);
+    let initialIndex;
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+      });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
+      microphoneSource.connect(analyser);
 
-    player ||= new SoundscapePlayer({
-      onTrackEnded: handleTrackEnded,
-      onTrackCycleComplete: handleTrackCycleComplete,
-    });
-    player.onTrackEnded = handleTrackEnded;
-    player.onTrackCycleComplete = handleTrackCycleComplete;
-    const initialIndex = trackSelector.next("medium", null);
-    trackIndexes.medium = initialIndex;
-    await player.play("medium", currentGainDb, initialIndex);
+      player ||= new SoundscapePlayer({
+        onTrackEnded: handleTrackEnded,
+        onTrackCycleComplete: handleTrackCycleComplete,
+      });
+      player.onTrackEnded = handleTrackEnded;
+      player.onTrackCycleComplete = handleTrackCycleComplete;
+      initialIndex = trackSelector.next("medium", null);
+      trackIndexes.medium = initialIndex;
+      await player.play("medium", currentGainDb, initialIndex);
+    } catch (error) {
+      // A rejection here (autoplay policy, no mic hardware, ...) must not leave the
+      // mic/AudioContext acquired above dangling — otherwise the browser mic
+      // indicator stays on and every retry short-circuits on `if (microphoneStream)
+      // return;` above. Run the same teardown stop() does before re-throwing.
+      await stop();
+      throw error;
+    }
     onTrackChange?.(getSoundscapeMeta("medium", initialIndex), {
       energy: "medium",
       trackIndex: initialIndex,
