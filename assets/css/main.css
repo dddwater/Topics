@@ -294,6 +294,23 @@ body {
   }
 }
 
+/* Groups the orb, meter, status, diagnostics and track/skip row into one
+   tighter cluster — they're all "what's happening right now" information
+   about the current listening session, and used to be spread across the
+   panel's full gap individually, reading as more fragmented than intended. */
+.vibe-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Without an explicit width, this shrink-wraps to its widest child's
+     intrinsic size — but .vibe-status/.vibe-diagnostics/.vibe-track all use
+     width: min(720px, calc(100% - 32px)), which needs a definite parent
+     width to resolve the percentage against (a shrink-to-fit parent makes
+     that percentage collapse, narrowing every one of them). */
+  width: 100%;
+  gap: 0.65rem;
+}
+
 /* ---------- 主按鈕 ---------- */
 
 .vibe-orb {
@@ -375,6 +392,29 @@ body {
 
 .vibe-orb[aria-pressed="true"]:hover {
   transform: none;
+}
+
+/* Idle state previously had no affordance at all — the button just sat
+   there with the same low-contrast glass look until clicked. A slow, faint
+   glow invites the tap without competing with the more pronounced breathing
+   rings that take over once actually listening. */
+.vibe-orb:not([aria-pressed="true"]) {
+  animation: idle-orb-glow 4.5s var(--ease) infinite;
+}
+
+@keyframes idle-orb-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px var(--hairline),
+      inset 0 1px 24px rgba(240, 238, 234, 0.05),
+      0 24px 60px rgba(0, 0, 0, 0.45),
+      0 0 0 0 rgba(216, 195, 160, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(216, 195, 160, 0.2),
+      inset 0 1px 24px rgba(240, 238, 234, 0.05),
+      0 24px 60px rgba(0, 0, 0, 0.45),
+      0 0 26px 4px rgba(216, 195, 160, 0.12);
+  }
 }
 
 @keyframes breathe {
@@ -508,6 +548,30 @@ body {
   transition: none;
 }
 
+/* Once actually playing, the full-size hero (eyebrow + giant title +
+   tagline) is pure repetition of the nav bar's own "VIBESPACE" brand mark,
+   and pushes the controls someone actually wants (orb, status, track, mode
+   buttons) below the fold on ordinary screen heights. Collapse it down to a
+   small wordmark, matching the nav brand's own styling, once the toggle is
+   pressed. */
+.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-hero {
+  margin-bottom: 0.2rem;
+}
+
+.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-eyebrow,
+.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-tagline {
+  display: none;
+}
+
+.vibe-panel:has(.vibe-orb[aria-pressed="true"]) .vibe-title {
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 /* ---------- 響應式 ---------- */
 
 @media (max-width: 640px) {
@@ -617,19 +681,39 @@ body {
 
 /* ---------- 營運意圖切換 ---------- */
 
+.vibe-mode-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vibe-modes-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Segmented-control look (shared pill container, buttons touching, active
+   option gets a highlighted fill + glow) instead of four separate discrete
+   pill buttons — reads as one setting with four positions, not four
+   unrelated buttons, and gives the selected mode a clearer highlight. */
 .vibe-modes {
   display: flex;
-  gap: 0.6rem;
+  gap: 2px;
   flex-wrap: wrap;
   justify-content: center;
+  padding: 3px;
+  border: 1px solid var(--hairline);
+  border-radius: 22px;
+  background: var(--glass);
 }
 
 .vibe-mode {
-  border: 1px solid var(--hairline);
+  border: 0;
   background: transparent;
   color: var(--text-muted);
-  border-radius: 20px;
-  padding: 0.45rem 1.1rem;
+  border-radius: 18px;
+  padding: 0.42rem 1rem;
   font-size: 0.68rem;
   letter-spacing: 0.14em;
   cursor: pointer;
@@ -637,14 +721,13 @@ body {
 }
 
 .vibe-mode:hover {
-  border-color: rgba(216, 195, 160, 0.35);
   color: var(--text-primary);
 }
 
 .vibe-mode.is-active {
-  border-color: var(--accent);
-  background: rgba(216, 195, 160, 0.12);
+  background: rgba(216, 195, 160, 0.16);
   color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(216, 195, 160, 0.32), 0 0 14px rgba(216, 195, 160, 0.16);
 }
 
 .vibe-mode-caption {
@@ -657,23 +740,29 @@ body {
   text-align: center;
 }
 
-.vibe-mode-details-toggle {
-  display: block;
-  margin: 0.5rem auto 0;
-  padding: 0.2rem 0.4rem;
+/* Replaces the old bottom-of-page "查看四種模式的差異" text link — the
+   explanation now lives right next to the control it explains instead of
+   requiring a scroll to the very end of the page to discover it exists. */
+.vibe-mode-info {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
   background: transparent;
-  border: 0;
   color: var(--text-muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-size: 0.72rem;
   cursor: pointer;
-  transition: color 0.3s var(--ease);
+  transition: all 0.3s var(--ease);
 }
 
-.vibe-mode-details-toggle:hover {
+.vibe-mode-info:hover,
+.vibe-mode-info.is-active {
+  border-color: rgba(216, 195, 160, 0.4);
   color: var(--accent);
+  background: rgba(216, 195, 160, 0.08);
 }
 
 .vibe-mode-details {

@@ -578,7 +578,7 @@
     const expanded = !modeDetailsPanel.hidden;
     modeDetailsPanel.hidden = expanded;
     modeDetailsToggle.setAttribute("aria-expanded", String(!expanded));
-    modeDetailsToggle.textContent = expanded ? "查看四種模式的差異 ▾" : "收起說明 ▴";
+    modeDetailsToggle.classList.toggle("is-active", !expanded);
   });
 
   const initialConfiguration = window.VibeAudioEngine?.getConfiguration?.();
