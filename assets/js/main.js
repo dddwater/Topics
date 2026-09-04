@@ -342,6 +342,7 @@
   const trackLabel = document.getElementById("vibeTrack");
   const skipButton = document.getElementById("vibeSkip");
   const detectedEnergyLabel = document.getElementById("vibeDetectedEnergy");
+  const diagnostics = document.getElementById("vibeDiagnostics");
   const playingRow = document.getElementById("vibePlayingRow");
   const playingEnergyLabel = document.getElementById("vibePlayingEnergy");
 
@@ -381,12 +382,15 @@
   let lastPlayingEnergyLabel = null;
 
   function updatePlayingRowVisibility() {
-    if (!playingRow) return;
-    playingRow.hidden = !(
-      lastDetectedEnergyLabel != null
+    const diverges = lastDetectedEnergyLabel != null
       && lastPlayingEnergyLabel != null
-      && lastPlayingEnergyLabel !== lastDetectedEnergyLabel
-    );
+      && lastPlayingEnergyLabel !== lastDetectedEnergyLabel;
+    if (playingRow) playingRow.hidden = !diverges;
+    // detectedEnergyLabel always mirrors the status line above it now, so
+    // the whole box is pure repetition ("Quiet" printed twice) except during
+    // this divergence window, where it's the only place "music hasn't caught
+    // up yet" is visible. Hide the box entirely rather than just its note.
+    if (diagnostics) diagnostics.hidden = !diverges;
   }
 
   const weights = bars.map((_, i) => {
@@ -523,6 +527,7 @@
     meter.classList.remove("is-active");
     if (trackLabel) trackLabel.textContent = "";
     if (detectedEnergyLabel) detectedEnergyLabel.textContent = "Social";
+    if (diagnostics) diagnostics.hidden = true;
     if (playingRow) playingRow.hidden = true;
     if (playingEnergyLabel) playingEnergyLabel.textContent = "尚未播放";
     lastDetectedEnergyLabel = null;
