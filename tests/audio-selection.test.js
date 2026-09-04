@@ -19,6 +19,16 @@ function loadScript(file, extras = {}) {
   return window;
 }
 
+// A fire-and-forget async chain (e.g. an "ended" event handler kicking off
+// selectRandomTrack -> player.setTrack -> audio.play()) resolves over several
+// microtask turns, and a fixed-count `await Promise.resolve()` loop is only
+// as deep as its count — flaky if the real chain is deeper. A macrotask
+// boundary is a hard guarantee instead: Node always fully drains the
+// microtask queue before running the next timer, however deep the chain.
+async function flushMicrotasks() {
+  await new Promise((resolve) => { setTimeout(resolve, 0); });
+}
+
 async function testSelector() {
   const window = loadScript("assets/js/track-selector.js");
   const { NonRepeatingTrackSelector } = window.VibeSpaceTrackSelection;
@@ -282,6 +292,7 @@ async function testManualModeDoesNotSnapOnExit() {
 
   const window = {
     AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -408,6 +419,7 @@ async function testLowDataQualityHold() {
 
   const window = {
     AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -434,6 +446,412 @@ async function testLowDataQualityHold() {
   micTrack.muted = true;
   rafCallback();
   assert.equal(lastDecision.reasonCode, "LOW_DATA_QUALITY", "a muted mic track must hold decisions instead of trusting the signal");
+
+  await window.VibeAudioEngine.stop();
+}
+
+// Regression test for a bug where main.js updated latestDecisionEnergy from
+// decision.energy on every tick with no guard for the transient/uncertain
+// pseudo-states — unlike currentState, which is correctly shielded. Since
+// context-engine.js forces energy to "medium" for a TRANSIENT_IGNORED tick
+// regardless of the real sustained state, a transient noise spike landing on
+// the same tick as a track's natural "ended" event could snap the category
+// down even though the volume/currentState logic correctly ignored the spike.
+// Drives the real assets/js/main.js engine end-to-end to prove a transient
+// spike can no longer influence which category the next track is drawn from.
+async function testTransientSpikeDoesNotSwitchCategory() {
+  const audioInstances = [];
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; audioInstances.push(this); }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAnalyser {
+    constructor() { this.fftSize = 2048; this.sample = 0; }
+    getFloatTimeDomainData(array) { array.fill(this.sample); }
+  }
+  const contextInstances = [];
+  class MockAudioContext {
+    constructor() {
+      this.state = "running";
+      this.destination = {};
+      this.analyser = new MockAnalyser();
+      contextInstances.push(this);
+    }
+    createAnalyser() { return this.analyser; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+
+  function makeFakeElement() {
+    return {
+      style: {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      addEventListener() {},
+      removeEventListener() {},
+      setAttribute() {},
+      textContent: "",
+    };
+  }
+  const documentMock = {
+    getElementById: () => makeFakeElement(),
+    querySelector: () => makeFakeElement(),
+    querySelectorAll: () => [],
+  };
+  const navigatorMock = {
+    mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) },
+  };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let rafCallback = null;
+  const requestAnimationFrame = (callback) => { rafCallback = callback; return 1; };
+  const cancelAnimationFrame = () => { rafCallback = null; };
+  let clock = 1_700_000_000_000;
+  const DateMock = { now: () => clock };
+
+  const window = {
+    AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
+    dispatchEvent() {},
+    addEventListener() {},
+  };
+  loadScript("assets/js/context-engine.js", { window });
+  loadScript("assets/js/track-selector.js", { window });
+  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+  loadScript("assets/js/main.js", {
+    window,
+    document: documentMock,
+    navigator: navigatorMock,
+    localStorage,
+    Date: DateMock,
+    Audio: MockAudio,
+    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+    requestAnimationFrame,
+    cancelAnimationFrame,
+  });
+
+  let lastDecision = null;
+  const trackChanges = [];
+  await window.VibeAudioEngine.start({
+    onDecision: (decision) => { lastDecision = decision; },
+    onTrackChange: (meta, context) => { trackChanges.push(context); },
+  });
+
+  // main.js builds its mic AudioContext before SoundscapePlayer.play() builds
+  // its own playback AudioContext, so the first instance is the mic analyser.
+  const micAnalyser = contextInstances[0].analyser;
+  const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
+  const tick = () => { clock += 100; rafCallback(); };
+
+  // Confirm a sustained "busy" state so the ambient decision engine reaches
+  // energy "high", then let the currently-playing "medium" track hit its own
+  // boundary so playback actually switches up to a "high" track (matching
+  // the documented "don't interrupt the current play-through" rule).
+  setLevelDb(-28);
+  for (let i = 0; i < 300 && lastDecision?.state !== "busy"; i += 1) tick();
+  assert.equal(lastDecision.state, "busy");
+  assert.equal(lastDecision.energy, "high");
+  trackChanges.length = 0;
+  audioInstances.at(-1).listeners.ended();
+  await flushMicrotasks();
+  assert.equal(trackChanges.at(-1)?.energy, "high", "track must have switched up to Busy at the boundary");
+
+  // Now inject a single dramatic transient spike on top of the sustained busy
+  // level (loud enough to trip TRANSIENT_IGNORED but not so loud it trips the
+  // separate clipping/LOW_DATA_QUALITY check), then simulate the (now Busy)
+  // track's natural "ended" event landing on that exact tick — the real-world
+  // race this bug depended on.
+  setLevelDb(-12);
+  tick();
+  assert.equal(lastDecision.reasonCode, "TRANSIENT_IGNORED", "this tick must be recognized as a transient spike");
+  trackChanges.length = 0;
+  audioInstances.at(-1).listeners.ended();
+  await flushMicrotasks();
+
+  assert.equal(
+    trackChanges.at(-1)?.energy,
+    "high",
+    "a transient spike coinciding with a track boundary must not be able to switch the category away from Busy",
+  );
+
+  await window.VibeAudioEngine.stop();
+}
+
+// Regression test for a bug where handleTrackCycleComplete had no Manual-mode
+// guard (unlike handleTrackEnded, which does), so once a track finished its
+// loop cycle while Manual was engaged, main.js would still pick the next
+// track's category off latestDecisionEnergy — silently violating "Manual
+// mode 曲風都不會自動變化" whenever the ambient decision (frozen from before
+// Manual was engaged) disagreed with the category actually still playing.
+// Drives the real assets/js/main.js engine end-to-end to prove Manual mode
+// now keeps playback within the same category instead of auto-switching.
+async function testManualModeDoesNotAutoSwitchCategoryOnCycleComplete() {
+  const audioInstances = [];
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; audioInstances.push(this); }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() { this.paused = false; return Promise.resolve(); }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAnalyser {
+    constructor() { this.fftSize = 2048; this.sample = 0; }
+    getFloatTimeDomainData(array) { array.fill(this.sample); }
+  }
+  const contextInstances = [];
+  class MockAudioContext {
+    constructor() {
+      this.state = "running";
+      this.destination = {};
+      this.analyser = new MockAnalyser();
+      contextInstances.push(this);
+    }
+    createAnalyser() { return this.analyser; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+
+  function makeFakeElement() {
+    return {
+      style: {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      addEventListener() {},
+      removeEventListener() {},
+      setAttribute() {},
+      textContent: "",
+    };
+  }
+  const documentMock = {
+    getElementById: () => makeFakeElement(),
+    querySelector: () => makeFakeElement(),
+    querySelectorAll: () => [],
+  };
+  const navigatorMock = {
+    mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) },
+  };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let rafCallback = null;
+  const requestAnimationFrame = (callback) => { rafCallback = callback; return 1; };
+  const cancelAnimationFrame = () => { rafCallback = null; };
+  let clock = 1_700_000_000_000;
+  const DateMock = { now: () => clock };
+
+  const window = {
+    AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
+    dispatchEvent() {},
+    addEventListener() {},
+  };
+
+  // Both NonRepeatingTrackSelector and SoundscapePlayer fall back to the real
+  // Math.random when not given one explicitly, and neither is reachable from
+  // this test to inject a deterministic one — main.js constructs its
+  // trackSelector at module-load time (loadScript below), so this has to be
+  // patched *before* loadScript runs, not just before start(). Pin it to 0
+  // (always picks the first available choice) so track selection never lands
+  // on medium index 4 ("Calm Loop", the one loop:true track — loopGoal 2-3),
+  // which would make a single "ended" event replay instead of completing the
+  // cycle this test depends on.
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+
+  let lastDecision = null;
+  const trackChanges = [];
+  try {
+    loadScript("assets/js/context-engine.js", { window });
+    loadScript("assets/js/track-selector.js", { window });
+    loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+    loadScript("assets/js/main.js", {
+      window,
+      document: documentMock,
+      navigator: navigatorMock,
+      localStorage,
+      Date: DateMock,
+      Audio: MockAudio,
+      CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    });
+
+    await window.VibeAudioEngine.start({
+      onDecision: (decision) => { lastDecision = decision; },
+      onTrackChange: (meta, context) => { trackChanges.push(context); },
+    });
+
+    const micAnalyser = contextInstances[0].analyser;
+    const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
+    const tick = () => { clock += 100; rafCallback(); };
+
+    // Confirm a sustained "busy" state (energy "high") while the initial
+    // "medium" track is still playing — the ambient engine has decided Busy,
+    // but per the "don't interrupt the current play-through" rule the track
+    // itself hasn't switched up yet. This is exactly the divergence between
+    // latestDecisionEnergy ("high") and the actively-playing category
+    // ("medium") that the bug needed to be observable.
+    setLevelDb(-28);
+    for (let i = 0; i < 300 && lastDecision?.state !== "busy"; i += 1) tick();
+    assert.equal(lastDecision.state, "busy");
+    assert.equal(lastDecision.energy, "high");
+    assert.equal(trackChanges.length, 1, "the still-playing initial track must not have switched yet");
+    assert.equal(trackChanges[0].energy, "medium");
+
+    // Engage Manual mode now, before the still-Medium track reaches its own
+    // boundary.
+    window.VibeAudioEngine.setOperationMode("manual");
+    tick();
+    assert.equal(lastDecision.reasonCode, "MANUAL_HOLD");
+
+    // Let the still-playing Medium track finish its (single, non-loop) cycle.
+    trackChanges.length = 0;
+    audioInstances.at(-1).listeners.ended();
+    await flushMicrotasks();
+
+    assert.equal(trackChanges.length, 1, "playback must continue, not go silent, once Manual's current track ends");
+    assert.equal(
+      trackChanges[0].energy,
+      "medium",
+      "Manual mode must never auto-switch category, even when latestDecisionEnergy disagrees with what's playing",
+    );
+
+    await window.VibeAudioEngine.stop();
+  } finally {
+    Math.random = originalRandom;
+  }
+}
+
+// Regression test for a bug where start() had no cleanup on failure: if the
+// initial player.play() rejected (e.g. an autoplay-policy rejection), the
+// already-acquired mic stream and AudioContext were left dangling, and the
+// `if (microphoneStream) return;` guard at the top of start() then made every
+// subsequent retry silently no-op instead of actually retrying.
+async function testStartCleansUpAfterPlayFailure() {
+  let playAttempt = 0;
+  class MockAudio {
+    constructor(src) { this.src = src; this.listeners = {}; this.paused = true; }
+    addEventListener(name, callback) { this.listeners[name] = callback; }
+    removeEventListener() {}
+    play() {
+      playAttempt += 1;
+      if (playAttempt === 1) return Promise.reject(new Error("NotAllowedError"));
+      this.paused = false;
+      return Promise.resolve();
+    }
+    pause() { this.paused = true; }
+  }
+  const node = () => ({
+    gain: { value: 1, setValueAtTime() {}, cancelScheduledValues() {}, exponentialRampToValueAtTime() {} },
+    connect() { return this; },
+    disconnect() {},
+  });
+  class MockAnalyser {
+    constructor() { this.fftSize = 2048; this.sample = 0; }
+    getFloatTimeDomainData(array) { array.fill(this.sample); }
+  }
+  const contextInstances = [];
+  class MockAudioContext {
+    constructor() {
+      this.state = "running";
+      this.destination = {};
+      this.analyser = new MockAnalyser();
+      contextInstances.push(this);
+    }
+    createAnalyser() { return this.analyser; }
+    createMediaStreamSource() { return { connect() {}, disconnect() {} }; }
+    createMediaElementSource() { return { connect() { return this; }, disconnect() {} }; }
+    createGain() { return node(); }
+    createDynamicsCompressor() { return { ...node(), threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} }; }
+    resume() { return Promise.resolve(); }
+    close() { this.state = "closed"; return Promise.resolve(); }
+  }
+
+  function makeFakeElement() {
+    return {
+      style: {},
+      classList: { add() {}, remove() {}, toggle() {} },
+      addEventListener() {},
+      removeEventListener() {},
+      setAttribute() {},
+      textContent: "",
+    };
+  }
+  const documentMock = {
+    getElementById: () => makeFakeElement(),
+    querySelector: () => makeFakeElement(),
+    querySelectorAll: () => [],
+  };
+  let micStopCalls = 0;
+  const micTrack = { readyState: "live", muted: false, stop() { micStopCalls += 1; } };
+  const navigatorMock = {
+    mediaDevices: { getUserMedia: async () => ({ getTracks: () => [micTrack] }) },
+  };
+  const storage = new Map();
+  const localStorage = {
+    getItem: (key) => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, String(value)),
+    removeItem: (key) => storage.delete(key),
+  };
+  let rafCallback = null;
+  const requestAnimationFrame = (callback) => { rafCallback = callback; return 1; };
+  const cancelAnimationFrame = () => { rafCallback = null; };
+
+  const window = {
+    AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
+    dispatchEvent() {},
+    addEventListener() {},
+  };
+  loadScript("assets/js/context-engine.js", { window });
+  loadScript("assets/js/track-selector.js", { window });
+  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+  loadScript("assets/js/main.js", {
+    window,
+    document: documentMock,
+    navigator: navigatorMock,
+    localStorage,
+    Date,
+    Audio: MockAudio,
+    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+    requestAnimationFrame,
+    cancelAnimationFrame,
+  });
+
+  await assert.rejects(() => window.VibeAudioEngine.start({}), /NotAllowedError/);
+  assert.equal(micStopCalls, 1, "the mic track must be stopped after a failed start");
+  assert.equal(contextInstances[0].state, "closed", "the mic AudioContext must be closed after a failed start");
+
+  // A second attempt must actually retry (not silently no-op because
+  // microphoneStream was left set from the failed attempt).
+  const engineState = await window.VibeAudioEngine.start({});
+  assert.ok(engineState, "a second start() attempt must succeed once cleanup has run");
 
   await window.VibeAudioEngine.stop();
 }
@@ -500,6 +918,9 @@ function testDetectionDiagnosticsMarkup() {
   await testCandidateStateConfirmation();
   await testManualModeDoesNotSnapOnExit();
   await testLowDataQualityHold();
+  await testTransientSpikeDoesNotSwitchCategory();
+  await testManualModeDoesNotAutoSwitchCategoryOnCycleComplete();
+  await testStartCleansUpAfterPlayFailure();
   await testLibraryAndLoopCount();
   await testFreesoundFiltersAndSnapshot();
   testDetectionDiagnosticsMarkup();

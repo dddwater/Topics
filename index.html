@@ -27,7 +27,9 @@
     </div>
   </nav>
 
-  <main class="vibe-panel">
+  <p class="vibe-auth-gate" id="vibeAuthGate">驗證登入中…</p>
+
+  <main class="vibe-panel" id="vibePanel" hidden>
     <header class="vibe-hero">
       <p class="vibe-eyebrow">Smart Ambient Sound</p>
       <h1 class="vibe-title">VibeSpace</h1>
@@ -93,7 +95,13 @@
   <script src="assets/js/supabase-config.js"></script>
   <script src="assets/js/auth.js"></script>
   <script>
-    window.VibeSpaceAuth.requireUser();
+    (async () => {
+      const user = await window.VibeSpaceAuth.requireUser();
+      if (user) {
+        document.getElementById("vibeAuthGate")?.setAttribute("hidden", "");
+        document.getElementById("vibePanel")?.removeAttribute("hidden");
+      }
+    })();
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await window.VibeSpaceAuth.signOut();
       window.location.href = "login.html";

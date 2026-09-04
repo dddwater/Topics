@@ -85,7 +85,12 @@
       || event.energy !== player.activeEnergy
       || event.trackIndex !== player.activeTrackIndex) return;
 
-    const nextEnergy = latestDecisionEnergy;
+    // Manual mode must never auto-switch category ("曲風都不會自動變化"), but the
+    // track still has to keep playing once its loop cycle ends — silence isn't an
+    // option either. Force the same category so playback continues within it,
+    // ignoring latestDecisionEnergy (which tracks the ambient decision engine, not
+    // the operator's manual choice).
+    const nextEnergy = operationMode === "manual" ? event.energy : latestDecisionEnergy;
     const reason = nextEnergy === event.energy
       ? "cycle-complete"
       : "environment-change-after-cycle";
@@ -175,9 +180,9 @@
 
     if (decision.state !== "transient" && decision.state !== "uncertain") {
       currentState = decision.state;
+      latestDecisionEnergy = decision.energy;
     }
     if (candidateState === currentState) candidateStartedAt = decisionTime;
-    latestDecisionEnergy = decision.energy;
     currentGainDb = decision.targetGainDb;
     if (player) {
       player.setTargetGainDb(decision.targetGainDb);
@@ -223,6 +228,10 @@
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("此瀏覽器不支援麥克風輸入");
     }
+    const session = await window.VibeSpaceAuth?.getSession?.().catch(() => null);
+    if (!session) {
+      throw new Error("請先登入才能使用麥克風聆聽功能");
+    }
 
     onLevel = options.onLevel;
     onDecision = options.onDecision;
@@ -242,24 +251,34 @@
     trackIndexes = { low: null, medium: null, high: null };
     trackSelector.reset();
 
-    microphoneStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
-    });
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
-    microphoneSource.connect(analyser);
+    let initialIndex;
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+      });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
+      microphoneSource.connect(analyser);
 
-    player ||= new SoundscapePlayer({
-      onTrackEnded: handleTrackEnded,
-      onTrackCycleComplete: handleTrackCycleComplete,
-    });
-    player.onTrackEnded = handleTrackEnded;
-    player.onTrackCycleComplete = handleTrackCycleComplete;
-    const initialIndex = trackSelector.next("medium", null);
-    trackIndexes.medium = initialIndex;
-    await player.play("medium", currentGainDb, initialIndex);
+      player ||= new SoundscapePlayer({
+        onTrackEnded: handleTrackEnded,
+        onTrackCycleComplete: handleTrackCycleComplete,
+      });
+      player.onTrackEnded = handleTrackEnded;
+      player.onTrackCycleComplete = handleTrackCycleComplete;
+      initialIndex = trackSelector.next("medium", null);
+      trackIndexes.medium = initialIndex;
+      await player.play("medium", currentGainDb, initialIndex);
+    } catch (error) {
+      // A rejection here (autoplay policy, no mic hardware, ...) must not leave the
+      // mic/AudioContext acquired above dangling — otherwise the browser mic
+      // indicator stays on and every retry short-circuits on `if (microphoneStream)
+      // return;` above. Run the same teardown stop() does before re-throwing.
+      await stop();
+      throw error;
+    }
     onTrackChange?.(getSoundscapeMeta("medium", initialIndex), {
       energy: "medium",
       trackIndex: initialIndex,
@@ -308,9 +327,6 @@
   }
 
   window.VibeAudioEngine = { start, stop, getConfiguration, getCurrentTrack, skipTrack, setOperationMode };
-  window.addEventListener("pagehide", () => {
-    void stop();
-  });
 })();
 
 (() => {
@@ -406,9 +422,15 @@
     }
 
     if (detectedEnergyLabel) {
-      const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
-      detectedEnergyLabel.textContent = detectedLabel;
-      lastDetectedEnergyLabel = detectedLabel;
+      // Derive from the same candidateName as the status line above (not
+      // ENERGY_LABELS[decision.energy]) so the two always agree. They can
+      // otherwise diverge — e.g. Comfort mode deliberately keeps music
+      // energy on Social even once the room is confirmed Busy — which read
+      // as two contradictory boxes on screen. Any real divergence between
+      // "room state" and "what's actually playing" still surfaces via the
+      // existing #vibePlayingRow note below, driven by renderTrack().
+      detectedEnergyLabel.textContent = candidateName;
+      lastDetectedEnergyLabel = candidateName;
       updatePlayingRowVisibility();
     }
   }
@@ -511,6 +533,10 @@
     else void start();
   });
 
+  window.addEventListener("pagehide", () => {
+    if (active) void stop();
+  });
+
   modeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const mode = button.dataset.vibeMode;
@@ -520,9 +546,16 @@
   });
 
   skipButton?.addEventListener("click", async () => {
-    if (!active) return;
-    const meta = await window.VibeAudioEngine?.skipTrack?.();
-    if (meta) renderTrack(meta);
+    if (!active || skipButton.disabled) return;
+    // Without this, impatient double-clicking can have two tracks briefly
+    // audible at once while the first request is still resolving.
+    skipButton.disabled = true;
+    try {
+      const meta = await window.VibeAudioEngine?.skipTrack?.();
+      if (meta) renderTrack(meta);
+    } finally {
+      skipButton.disabled = false;
+    }
   });
 
   modeDetailsToggle?.addEventListener("click", () => {
