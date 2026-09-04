@@ -63,8 +63,9 @@
 - [ ] **快速停止→重啟可能漏記一筆**（未覆核）`session-recorder.js:36` — stop→立刻 start→stop 時，第二次 session 的開始時間可能被第一次的 `finally` 清掉。demo 正常操作步調不太會觸發，留到之後處理。
 - [ ] **總使用次數/總時間統計只算最近 100 筆**（已確認）`history.js:34` + `history.html:170`（同一顆 bug） — 超過 100 筆的使用者統計悄悄變少，沒有提示。demo 帳號紀錄數不會到 100 筆，留到之後處理。
 - [ ] **登入檢查/登出綁定被重複寫兩次**（已確認）`history.html:184` — inline script + `history.js` 各跑一次。不影響畫面，留到之後處理。
-- [ ] **Morandi 配色小字對比度不足**（已確認）`insights.html:116` — `--busy`/`--quiet` 當文字色只有 ~3:1，未達 WCAG AA 4.5:1（舊配色 ~7.4:1）。**注意：這是另一條還沒合併的分支（`style/insights-morandi-state-colors`）的改動，這條分支目前也不在 `delivery` 上**，跟這次修的東西是分開的。
+- [ ] **Morandi 配色小字對比度不足**（已確認）`insights.html:116` — `--busy`/`--quiet` 當文字色只有 ~3:1，未達 WCAG AA 4.5:1（舊配色 ~7.4:1）。配色本身（PR #37）已合併進 delivery，但這個對比度問題還沒修。
 - [ ] **`main.js` 混雜引擎邏輯與 UI 綁定**（未覆核，架構建議）建議拆成 `audio-engine.js` + UI glue。純架構建議，不影響 demo。
+- [x] **「四種模式的差異」說明面板文案與表格已過時**（本次已修復）`index.html` — intro 那句「四種模式只有在 Busy 時才會表現不同；安靜或一般交談時，四種模式完全一樣」是錯的：`context-engine.js` 的 Quiet/Social 狀態下 Comfort/Balanced/Flow 三者音量其實也都不同（commit `3a83af4` 改的，但沒有同步更新這個說明面板）。另外表格裡「Flow 反應比 Balanced 更快」也沒有程式依據——兩者用同一套 10 秒確認窗與門檻值，Flow 只有「幅度」比較大，不是「速度」比較快。已刪除該句 intro，並把表格改成列出 Quiet/Social/Busy 三種狀態的音量調整，數字都對照程式碼核對過；「Flow 更快」的說法也拿掉。已用瀏覽器實測 320–900px 寬度下表格排版都不會溢出。
 - [ ] **start() 失敗後診斷欄位留著舊資料**（未覆核）`main.js:454`
 - [ ] **隱藏的「聲學係數」悄悄縮放生產力提升%**（已確認）`pricing.html:1432` — 不同方案有 0.8/1.0/1.25 係數，UI 完全沒揭露。除非 demo 時會特別切換方案比較數字，否則不會被注意到。
 - [ ] **負數金額格式化不一致**（已確認）`pricing.html:1466` — 只有刻意示範「投報為負」的極端情境才會出現。
