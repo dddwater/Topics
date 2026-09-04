@@ -170,7 +170,7 @@
         <div class="panel-heading"><span class="section-label">本週實際聲景</span><span class="tiny-note" id="history-count"></span></div>
         <div class="donut-row">
           <div class="donut" id="donut">
-            <div><strong id="donut-social">–</strong><span>Social 為主</span></div>
+            <div><strong id="donut-social">–</strong><span id="donut-caption">–</span></div>
           </div>
           <div class="legend" id="legend"></div>
         </div>
@@ -212,6 +212,20 @@
 
   <script src="assets/js/insights.js"></script>
   <script src="assets/js/insights-view.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase-config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script>
+    if (window.VibeSpaceAuth) {
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          await window.VibeSpaceAuth.signOut();
+          window.location.href = "login.html";
+        });
+      }
+    }
+  </script>
 </body>
 </html>
 

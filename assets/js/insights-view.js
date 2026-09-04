@@ -25,7 +25,9 @@
   function renderDonut() {
     const donut = document.getElementById("donut");
     donut.style.background = `conic-gradient(var(--quiet) 0 ${summary.quiet}%, var(--social) ${summary.quiet}% ${summary.quiet + summary.social}%, var(--busy) ${summary.quiet + summary.social}% 100%)`;
-    document.getElementById("donut-social").textContent = `${summary.social}%`;
+    const topState = ["quiet", "social", "busy"].reduce((a, b) => (summary[b] > summary[a] ? b : a));
+    document.getElementById("donut-social").textContent = `${summary[topState]}%`;
+    document.getElementById("donut-caption").textContent = `${STATE_LABEL[topState]} 為主`;
 
     const legend = document.getElementById("legend");
     legend.innerHTML = "";

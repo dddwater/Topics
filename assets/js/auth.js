@@ -45,14 +45,28 @@
     return data.user;
   }
 
+  // Unlike getUser(), this reads the locally-stored session and only hits
+  // the network if the token actually needs refreshing — safe to call from
+  // a hot path (e.g. as a quick "are we logged in at all" check) without
+  // depending on a live round-trip every time.
+  async function getSession() {
+    const supabase = getClient();
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session;
+  }
+
   async function requireUser(redirectTo = "login.html") {
     try {
       const user = await getUser();
       if (!user) window.location.href = redirectTo;
       return user;
     } catch (error) {
-      console.warn(error);
-      window.location.href = redirectTo;
+      // A network/server error here is not the same as "confirmed logged
+      // out" — redirecting on it would force an already-listening user
+      // straight to the login page over a transient blip (session-recorder.js
+      // re-checks this on every session start). Fail open instead.
+      console.warn("VibeSpace: could not verify the current user (leaving session as-is):", error);
       return null;
     }
   }
@@ -102,6 +116,7 @@
     signIn,
     signOut,
     getUser,
+    getSession,
     requireUser,
     addUsageRecord,
     listUsageRecords,

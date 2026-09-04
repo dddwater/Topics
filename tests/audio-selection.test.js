@@ -21,9 +21,12 @@ function loadScript(file, extras = {}) {
 
 // A fire-and-forget async chain (e.g. an "ended" event handler kicking off
 // selectRandomTrack -> player.setTrack -> audio.play()) resolves over several
-// microtask turns. A single `await Promise.resolve()` only flushes one.
-async function flushMicrotasks(times = 5) {
-  for (let i = 0; i < times; i += 1) await Promise.resolve();
+// microtask turns, and a fixed-count `await Promise.resolve()` loop is only
+// as deep as its count — flaky if the real chain is deeper. A macrotask
+// boundary is a hard guarantee instead: Node always fully drains the
+// microtask queue before running the next timer, however deep the chain.
+async function flushMicrotasks() {
+  await new Promise((resolve) => { setTimeout(resolve, 0); });
 }
 
 async function testSelector() {
@@ -289,7 +292,7 @@ async function testManualModeDoesNotSnapOnExit() {
 
   const window = {
     AudioContext: MockAudioContext,
-    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -416,7 +419,7 @@ async function testLowDataQualityHold() {
 
   const window = {
     AudioContext: MockAudioContext,
-    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -523,7 +526,7 @@ async function testTransientSpikeDoesNotSwitchCategory() {
 
   const window = {
     AudioContext: MockAudioContext,
-    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -664,68 +667,85 @@ async function testManualModeDoesNotAutoSwitchCategoryOnCycleComplete() {
 
   const window = {
     AudioContext: MockAudioContext,
-    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };
-  loadScript("assets/js/context-engine.js", { window });
-  loadScript("assets/js/track-selector.js", { window });
-  loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
-  loadScript("assets/js/main.js", {
-    window,
-    document: documentMock,
-    navigator: navigatorMock,
-    localStorage,
-    Date: DateMock,
-    Audio: MockAudio,
-    CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
-    requestAnimationFrame,
-    cancelAnimationFrame,
-  });
+
+  // Both NonRepeatingTrackSelector and SoundscapePlayer fall back to the real
+  // Math.random when not given one explicitly, and neither is reachable from
+  // this test to inject a deterministic one — main.js constructs its
+  // trackSelector at module-load time (loadScript below), so this has to be
+  // patched *before* loadScript runs, not just before start(). Pin it to 0
+  // (always picks the first available choice) so track selection never lands
+  // on medium index 4 ("Calm Loop", the one loop:true track — loopGoal 2-3),
+  // which would make a single "ended" event replay instead of completing the
+  // cycle this test depends on.
+  const originalRandom = Math.random;
+  Math.random = () => 0;
 
   let lastDecision = null;
   const trackChanges = [];
-  await window.VibeAudioEngine.start({
-    onDecision: (decision) => { lastDecision = decision; },
-    onTrackChange: (meta, context) => { trackChanges.push(context); },
-  });
+  try {
+    loadScript("assets/js/context-engine.js", { window });
+    loadScript("assets/js/track-selector.js", { window });
+    loadScript("assets/js/soundscape-player.js", { window, Audio: MockAudio });
+    loadScript("assets/js/main.js", {
+      window,
+      document: documentMock,
+      navigator: navigatorMock,
+      localStorage,
+      Date: DateMock,
+      Audio: MockAudio,
+      CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts?.detail; } },
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    });
 
-  const micAnalyser = contextInstances[0].analyser;
-  const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
-  const tick = () => { clock += 100; rafCallback(); };
+    await window.VibeAudioEngine.start({
+      onDecision: (decision) => { lastDecision = decision; },
+      onTrackChange: (meta, context) => { trackChanges.push(context); },
+    });
 
-  // Confirm a sustained "busy" state (energy "high") while the initial
-  // "medium" track is still playing — the ambient engine has decided Busy,
-  // but per the "don't interrupt the current play-through" rule the track
-  // itself hasn't switched up yet. This is exactly the divergence between
-  // latestDecisionEnergy ("high") and the actively-playing category
-  // ("medium") that the bug needed to be observable.
-  setLevelDb(-28);
-  for (let i = 0; i < 300 && lastDecision?.state !== "busy"; i += 1) tick();
-  assert.equal(lastDecision.state, "busy");
-  assert.equal(lastDecision.energy, "high");
-  assert.equal(trackChanges.length, 1, "the still-playing initial track must not have switched yet");
-  assert.equal(trackChanges[0].energy, "medium");
+    const micAnalyser = contextInstances[0].analyser;
+    const setLevelDb = (dbRel) => { micAnalyser.sample = 10 ** (dbRel / 20); };
+    const tick = () => { clock += 100; rafCallback(); };
 
-  // Engage Manual mode now, before the still-Medium track reaches its own
-  // boundary.
-  window.VibeAudioEngine.setOperationMode("manual");
-  tick();
-  assert.equal(lastDecision.reasonCode, "MANUAL_HOLD");
+    // Confirm a sustained "busy" state (energy "high") while the initial
+    // "medium" track is still playing — the ambient engine has decided Busy,
+    // but per the "don't interrupt the current play-through" rule the track
+    // itself hasn't switched up yet. This is exactly the divergence between
+    // latestDecisionEnergy ("high") and the actively-playing category
+    // ("medium") that the bug needed to be observable.
+    setLevelDb(-28);
+    for (let i = 0; i < 300 && lastDecision?.state !== "busy"; i += 1) tick();
+    assert.equal(lastDecision.state, "busy");
+    assert.equal(lastDecision.energy, "high");
+    assert.equal(trackChanges.length, 1, "the still-playing initial track must not have switched yet");
+    assert.equal(trackChanges[0].energy, "medium");
 
-  // Let the still-playing Medium track finish its (single, non-loop) cycle.
-  trackChanges.length = 0;
-  audioInstances.at(-1).listeners.ended();
-  await flushMicrotasks();
+    // Engage Manual mode now, before the still-Medium track reaches its own
+    // boundary.
+    window.VibeAudioEngine.setOperationMode("manual");
+    tick();
+    assert.equal(lastDecision.reasonCode, "MANUAL_HOLD");
 
-  assert.equal(trackChanges.length, 1, "playback must continue, not go silent, once Manual's current track ends");
-  assert.equal(
-    trackChanges[0].energy,
-    "medium",
-    "Manual mode must never auto-switch category, even when latestDecisionEnergy disagrees with what's playing",
-  );
+    // Let the still-playing Medium track finish its (single, non-loop) cycle.
+    trackChanges.length = 0;
+    audioInstances.at(-1).listeners.ended();
+    await flushMicrotasks();
 
-  await window.VibeAudioEngine.stop();
+    assert.equal(trackChanges.length, 1, "playback must continue, not go silent, once Manual's current track ends");
+    assert.equal(
+      trackChanges[0].energy,
+      "medium",
+      "Manual mode must never auto-switch category, even when latestDecisionEnergy disagrees with what's playing",
+    );
+
+    await window.VibeAudioEngine.stop();
+  } finally {
+    Math.random = originalRandom;
+  }
 }
 
 // Regression test for a bug where start() had no cleanup on failure: if the
@@ -805,7 +825,7 @@ async function testStartCleansUpAfterPlayFailure() {
 
   const window = {
     AudioContext: MockAudioContext,
-    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
+    VibeSpaceAuth: { getSession: async () => ({ user: { id: "test-user" } }) },
     dispatchEvent() {},
     addEventListener() {},
   };

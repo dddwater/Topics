@@ -228,8 +228,8 @@
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("此瀏覽器不支援麥克風輸入");
     }
-    const user = await window.VibeSpaceAuth?.getUser?.().catch(() => null);
-    if (!user) {
+    const session = await window.VibeSpaceAuth?.getSession?.().catch(() => null);
+    if (!session) {
       throw new Error("請先登入才能使用麥克風聆聽功能");
     }
 
@@ -422,9 +422,15 @@
     }
 
     if (detectedEnergyLabel) {
-      const detectedLabel = ENERGY_LABELS[decision.energy] || decision.energy;
-      detectedEnergyLabel.textContent = detectedLabel;
-      lastDetectedEnergyLabel = detectedLabel;
+      // Derive from the same candidateName as the status line above (not
+      // ENERGY_LABELS[decision.energy]) so the two always agree. They can
+      // otherwise diverge — e.g. Comfort mode deliberately keeps music
+      // energy on Social even once the room is confirmed Busy — which read
+      // as two contradictory boxes on screen. Any real divergence between
+      // "room state" and "what's actually playing" still surfaces via the
+      // existing #vibePlayingRow note below, driven by renderTrack().
+      detectedEnergyLabel.textContent = candidateName;
+      lastDetectedEnergyLabel = candidateName;
       updatePlayingRowVisibility();
     }
   }
@@ -540,9 +546,16 @@
   });
 
   skipButton?.addEventListener("click", async () => {
-    if (!active) return;
-    const meta = await window.VibeAudioEngine?.skipTrack?.();
-    if (meta) renderTrack(meta);
+    if (!active || skipButton.disabled) return;
+    // Without this, impatient double-clicking can have two tracks briefly
+    // audible at once while the first request is still resolving.
+    skipButton.disabled = true;
+    try {
+      const meta = await window.VibeAudioEngine?.skipTrack?.();
+      if (meta) renderTrack(meta);
+    } finally {
+      skipButton.disabled = false;
+    }
   });
 
   modeDetailsToggle?.addEventListener("click", () => {
