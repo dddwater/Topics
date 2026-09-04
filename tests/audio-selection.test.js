@@ -282,6 +282,7 @@ async function testManualModeDoesNotSnapOnExit() {
 
   const window = {
     AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
     dispatchEvent() {},
     addEventListener() {},
   };
@@ -408,6 +409,7 @@ async function testLowDataQualityHold() {
 
   const window = {
     AudioContext: MockAudioContext,
+    VibeSpaceAuth: { getUser: async () => ({ id: "test-user" }) },
     dispatchEvent() {},
     addEventListener() {},
   };

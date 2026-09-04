@@ -223,6 +223,10 @@
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("此瀏覽器不支援麥克風輸入");
     }
+    const user = await window.VibeSpaceAuth?.getUser?.().catch(() => null);
+    if (!user) {
+      throw new Error("請先登入才能使用麥克風聆聽功能");
+    }
 
     onLevel = options.onLevel;
     onDecision = options.onDecision;
@@ -308,9 +312,6 @@
   }
 
   window.VibeAudioEngine = { start, stop, getConfiguration, getCurrentTrack, skipTrack, setOperationMode };
-  window.addEventListener("pagehide", () => {
-    void stop();
-  });
 })();
 
 (() => {
@@ -509,6 +510,10 @@
   toggle.addEventListener("click", () => {
     if (active) void stop();
     else void start();
+  });
+
+  window.addEventListener("pagehide", () => {
+    if (active) void stop();
   });
 
   modeButtons.forEach((button) => {

@@ -6,6 +6,22 @@
   let profileName = null;
   let mode = null;
   let saving = false;
+  let noticeTimer = null;
+
+  function showSaveFailureNotice() {
+    let notice = document.getElementById("vibeSaveNotice");
+    if (!notice) {
+      notice = document.createElement("p");
+      notice.id = "vibeSaveNotice";
+      notice.className = "vibe-save-notice";
+      notice.setAttribute("role", "alert");
+      document.body.appendChild(notice);
+    }
+    notice.textContent = "本次使用紀錄儲存失敗，請確認網路連線；可稍後至「我的紀錄」查看。";
+    notice.hidden = false;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => { notice.hidden = true; }, 6000);
+  }
 
   async function refreshIdentity() {
     const user = await window.VibeSpaceAuth.requireUser();
@@ -33,6 +49,7 @@
       });
     } catch (error) {
       console.warn("VibeSpace usage record was not saved:", error);
+      showSaveFailureNotice();
     } finally {
       sessionStartedAt = null;
       saving = false;

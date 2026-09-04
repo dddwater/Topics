@@ -1371,6 +1371,7 @@
       empInput.addEventListener('input', () => {
         let val = parseInt(empInput.value) || 1;
         val = Math.max(1, Math.min(200, val));
+        empInput.value = val;
         empSlider.value = val;
         updateEmp();
       });
@@ -1389,6 +1390,7 @@
       salaryInput.addEventListener('input', () => {
         let val = parseInt(salaryInput.value) || 30000;
         val = Math.max(20000, Math.min(200000, val));
+        salaryInput.value = val;
         salarySlider.value = val;
         updateSalary();
       });
@@ -1436,7 +1438,8 @@
       const monthlyGain = Math.round(totalMonthlySalary * effectiveBoost);
       const annualGain = monthlyGain * 12;
 
-      const monthlyPlanCost = planPricesMonthly[selectedPlanKey] || 990;
+      const baseMonthlyPlanCost = planPricesMonthly[selectedPlanKey] || 990;
+      const monthlyPlanCost = isYearly ? Math.round(baseMonthlyPlanCost * 0.8) : baseMonthlyPlanCost;
       const annualPlanCost = monthlyPlanCost * 12;
 
       const annualNetGain = annualGain - annualPlanCost;
