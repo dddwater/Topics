@@ -71,6 +71,9 @@
 
 - [x] **「環境狀態」框的提示行讓人看不懂哪個字代表什麼**（本次已修復，使用者截圖回報）`index.html` — 上面那項修完後，divergence 時會顯示「Quiet · 目前仍播放 Social」，但沒有任何字標明「Quiet」是環境、「Social」是音樂，使用者反應看不懂、覺得排版很怪。
   → 修法：`dt` 從「目前狀態」改成「環境狀態」（明確這格是在講環境），提示行從「· 目前仍播放」改成「· 音樂仍播放」（明確主詞是音樂），例如變成「環境狀態 / Quiet · 音樂仍播放 Social」。已用瀏覽器實測兩種情境（有/無 divergence）排版都正常。
+
+- [x] **「環境狀態」框沒有 divergence 時整個框都是重複資訊**（本次已修復，使用者追問發現）`index.html` + `main.js` — 上面兩項修完後使用者又問：`#vibeStatus`（大字狀態行）跟框內的 `#vibeDetectedEnergy` 現在永遠顯示同一個字（今天稍早的 Comfort 矛盾修法讓兩者共用同一個來源），所以沒有 divergence 時整個框 100% 重複大字那行，等於同一個「Quiet」印兩次。這其實是團隊先前就處理過的同一類問題（`main.js` 舊註解：候選/確認/播放中三個框「only carry real information when they diverge...otherwise...just look like duplicate boxes, so they stay hidden until they say something new」），只是「環境狀態」這個框本身沒有跟著套用同一套規則。
+  → 修法：`updatePlayingRowVisibility()` 現在同時控制整個 `#vibeDiagnostics` 框的顯示，不只是內層提示行——沒有 divergence 時整個框隱藏，只留大字狀態行；`main.css` 加 `.vibe-diagnostics[hidden]{display:none}`（跟 `.vibe-panel[hidden]` 同樣的 override 理由）；`index.html` 靜態標記也預設 `hidden`，避免頁面剛載入、JS 還沒跑之前先閃一下舊的預設文字；`stop()` 也會明確重置。已用瀏覽器實測兩種情境（框完全隱藏 vs. 顯示）畫面正確。
 - [ ] **快速停止→重啟可能漏記一筆**（未覆核）`session-recorder.js:36` — stop→立刻 start→stop 時，第二次 session 的開始時間可能被第一次的 `finally` 清掉。demo 正常操作步調不太會觸發，留到之後處理。
 - [ ] **總使用次數/總時間統計只算最近 100 筆**（已確認）`history.js:34` + `history.html:170`（同一顆 bug） — 超過 100 筆的使用者統計悄悄變少，沒有提示。demo 帳號紀錄數不會到 100 筆，留到之後處理。
 - [ ] **登入檢查/登出綁定被重複寫兩次**（已確認）`history.html:184` — inline script + `history.js` 各跑一次。不影響畫面，留到之後處理。
