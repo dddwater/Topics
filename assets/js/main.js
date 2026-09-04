@@ -494,8 +494,15 @@
     return 1 - Math.abs(i - center) / (center + 1.4);
   });
 
+  // Smoothed separately from the per-bar meter (which relies on its own CSS
+  // transition for smoothing) — the orb is a single large element, so raw
+  // per-frame mic noise would read as a nervous flicker instead of a breath.
+  let smoothedOrbLevel = 0;
+
   function render(level) {
     const clamped = Math.min(1, Math.max(0, level));
+    smoothedOrbLevel += (clamped - smoothedOrbLevel) * 0.18;
+    toggle.style.setProperty("--vibe-level", smoothedOrbLevel.toFixed(3));
     bars.forEach((bar, i) => {
       const h = IDLE_HEIGHT + (MAX_HEIGHT - IDLE_HEIGHT) * clamped * weights[i];
       bar.style.height = `${h}px`;
@@ -506,6 +513,8 @@
     bars.forEach((bar) => {
       bar.style.height = `${IDLE_HEIGHT}px`;
     });
+    smoothedOrbLevel = 0;
+    toggle.style.setProperty("--vibe-level", "0");
   }
 
   function renderDecision(decision, context = {}) {
