@@ -80,7 +80,7 @@
 - [x] `insights.js:73`（上游已修復，commit `b019df3`）三個百分比原本各自四捨五入不保證加總 100；已改為 largest-remainder 演算法保證加總等於 100。
 - [ ] `insights.html:19`（已確認）`--accent-cyan` 是配色改版後的死 CSS 變數。
 - [ ] `insights.html:121`（已確認）熱力圖時間標籤跟資料格子欄寬算法不同，沒對齊。
-- [ ] `insights.html:165`（已確認）文案宣稱「本週實際聲景」，但整頁是寫死的示範資料，沒接 Supabase。
+- [x] `insights.html:165`（本次已修復）文案原本宣稱「本週實際聲景」「VIBE INSIGHTS · 最近 7 日」「今日時間軸」，但整頁是寫死的示範資料（`createDemoHistory()`，沒接 Supabase）。已改成「VIBE INSIGHTS · 示範資料」「本週聲景 · 示範資料」「時間軸 · 示範資料」，明確標示這是示範內容。瀏覽器實測確認排版沒有跑版。
 - [ ] `main.js:297`（未覆核）頂層 DOM 查詢沒有 null guard。
 - [ ] `main.js:374`（未覆核）`renderDecision` 的 `context` 參數完全沒用到。
 - [ ] `main.js:500`（未覆核）Skip 失敗沒有任何提示。
