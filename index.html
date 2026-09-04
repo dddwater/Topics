@@ -36,46 +36,51 @@
       <p class="vibe-tagline">讓空間自己找到它的聲音</p>
     </header>
 
-    <button class="vibe-orb" id="vibeToggle" type="button" aria-pressed="false">
-      <span class="vibe-orb__ring vibe-orb__ring--outer"></span>
-      <span class="vibe-orb__ring vibe-orb__ring--inner"></span>
-      <span class="vibe-orb__label" id="vibeLabel">開始</span>
-    </button>
+    <div class="vibe-core">
+      <button class="vibe-orb" id="vibeToggle" type="button" aria-pressed="false">
+        <span class="vibe-orb__ring vibe-orb__ring--outer"></span>
+        <span class="vibe-orb__ring vibe-orb__ring--inner"></span>
+        <span class="vibe-orb__label" id="vibeLabel">開始</span>
+      </button>
 
-    <div class="vibe-meter" aria-hidden="true">
-      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
-      <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
-    </div>
-
-    <p class="vibe-status" id="vibeStatus">尚未啟動</p>
-
-    <dl class="vibe-diagnostics" id="vibeDiagnostics" aria-live="polite" hidden>
-      <div>
-        <dt>環境狀態</dt>
-        <dd>
-          <span id="vibeDetectedEnergy">Social</span>
-          <span id="vibePlayingRow" class="vibe-diagnostics__note" hidden>· 音樂仍播放 <span id="vibePlayingEnergy">尚未播放</span></span>
-        </dd>
+      <div class="vibe-meter" aria-hidden="true">
+        <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
+        <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
+        <span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span><span class="vibe-meter__bar"></span>
       </div>
-    </dl>
 
-    <div class="vibe-track" aria-live="polite">
-      <span id="vibeTrack"></span>
-      <button id="vibeSkip" type="button" class="vibe-track__skip">下一首 »</button>
+      <p class="vibe-status" id="vibeStatus">尚未啟動</p>
+
+      <dl class="vibe-diagnostics" id="vibeDiagnostics" aria-live="polite" hidden>
+        <div>
+          <dt>環境狀態</dt>
+          <dd>
+            <span id="vibeDetectedEnergy">Social</span>
+            <span id="vibePlayingRow" class="vibe-diagnostics__note" hidden>· 音樂仍播放 <span id="vibePlayingEnergy">尚未播放</span></span>
+          </dd>
+        </div>
+      </dl>
+
+      <div class="vibe-track" aria-live="polite">
+        <span id="vibeTrack"></span>
+        <button id="vibeSkip" type="button" class="vibe-track__skip">下一首 »</button>
+      </div>
     </div>
 
-    <div class="vibe-modes" role="group" aria-label="營運意圖">
-      <button type="button" class="vibe-mode" data-vibe-mode="comfort">Comfort</button>
-      <button type="button" class="vibe-mode" data-vibe-mode="balanced">Balanced</button>
-      <button type="button" class="vibe-mode" data-vibe-mode="flow">Flow</button>
-      <button type="button" class="vibe-mode" data-vibe-mode="manual">Manual</button>
-    </div>
-    <p class="vibe-mode-caption" id="vibeModeCaption" aria-live="polite"></p>
-    <button type="button" class="vibe-mode-details-toggle" id="vibeModeDetailsToggle" aria-expanded="false" aria-controls="vibeModeDetailsPanel">
-      查看四種模式的差異 ▾
-    </button>
-    <div class="vibe-mode-details" id="vibeModeDetailsPanel" hidden>
+    <div class="vibe-mode-group">
+      <div class="vibe-modes-row">
+        <div class="vibe-modes" role="group" aria-label="營運意圖">
+          <button type="button" class="vibe-mode" data-vibe-mode="comfort">Comfort</button>
+          <button type="button" class="vibe-mode" data-vibe-mode="balanced">Balanced</button>
+          <button type="button" class="vibe-mode" data-vibe-mode="flow">Flow</button>
+          <button type="button" class="vibe-mode" data-vibe-mode="manual">Manual</button>
+        </div>
+        <button type="button" class="vibe-mode-info" id="vibeModeDetailsToggle" aria-expanded="false" aria-controls="vibeModeDetailsPanel" aria-label="查看四種模式的差異">
+          <span aria-hidden="true">ⓘ</span>
+        </button>
+      </div>
+      <p class="vibe-mode-caption" id="vibeModeCaption" aria-live="polite"></p>
+      <div class="vibe-mode-details" id="vibeModeDetailsPanel" hidden>
       <table class="vibe-mode-details__table">
         <thead>
           <tr><th scope="col">模式</th><th scope="col">音量調整（Quiet · Social · Busy）</th><th scope="col">Busy 時是否換成有活力的曲風</th></tr>
@@ -87,6 +92,7 @@
           <tr><th scope="row">Manual</th><td colspan="2">完全暫停自動判斷，音量與曲風都不會自動變化，只能用「下一首」手動切換</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </main>
 
