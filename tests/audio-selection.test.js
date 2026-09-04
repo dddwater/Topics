@@ -262,7 +262,7 @@ async function testManualModeDoesNotSnapOnExit() {
 
   function makeFakeElement() {
     return {
-      style: {},
+      style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {} },
       addEventListener() {},
       removeEventListener() {},
@@ -390,7 +390,7 @@ async function testLowDataQualityHold() {
 
   function makeFakeElement() {
     return {
-      style: {},
+      style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {} },
       addEventListener() {},
       removeEventListener() {},
@@ -496,7 +496,7 @@ async function testTransientSpikeDoesNotSwitchCategory() {
 
   function makeFakeElement() {
     return {
-      style: {},
+      style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {} },
       addEventListener() {},
       removeEventListener() {},
@@ -637,7 +637,7 @@ async function testManualModeDoesNotAutoSwitchCategoryOnCycleComplete() {
 
   function makeFakeElement() {
     return {
-      style: {},
+      style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {} },
       addEventListener() {},
       removeEventListener() {},
@@ -795,7 +795,7 @@ async function testStartCleansUpAfterPlayFailure() {
 
   function makeFakeElement() {
     return {
-      style: {},
+      style: { setProperty() {} },
       classList: { add() {}, remove() {}, toggle() {} },
       addEventListener() {},
       removeEventListener() {},
