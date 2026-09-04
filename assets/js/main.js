@@ -33,6 +33,11 @@
     },
   };
 
+  // Length of the ambient pre-measurement done before the first track plays
+  // (see detectInitialState()) — long enough for smoothedLongTermDb-style
+  // averaging to reflect the actual room instead of guessing.
+  const DETECTION_SECONDS = 3;
+
   let audioContext = null;
   let analyser = null;
   let microphoneSource = null;
@@ -41,6 +46,7 @@
   let onLevel = null;
   let onDecision = null;
   let onTrackChange = null;
+  let onDetecting = null;
   let player = null;
   const trackSelector = new NonRepeatingTrackSelector(getSoundscapeTrackCount, { historySize: 2 });
 
@@ -141,6 +147,64 @@
     return 0.94;
   }
 
+  function readDbSample() {
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    let sum = 0;
+    for (let index = 0; index < samples.length; index += 1) sum += samples[index] ** 2;
+    const rms = Math.sqrt(sum / samples.length);
+    const db = 20 * Math.log10(Math.max(rms, 0.00001));
+    return { rms, db };
+  }
+
+  // Same entering-a-state thresholds context-engine.js uses when currentState
+  // doesn't already match the candidate (see busyThreshold/quietThreshold in
+  // decideContext) — there's no real currentState yet at startup, so this is
+  // the neutral case rather than the tighter hysteresis-exit thresholds.
+  function classifyAmbient(avgDb, activeCalibration) {
+    const delta = avgDb - activeCalibration.normalBaselineDbRel;
+    if (delta >= 4.5) return "busy";
+    if (delta <= -4.5) return "quiet";
+    return "social";
+  }
+
+  // Samples the room for DETECTION_SECONDS before any track is chosen, so the
+  // first thing played reflects the actual space instead of always assuming
+  // Social. Drives onLevel (so the meter visibly reacts to real input) and
+  // onDetecting (so the UI can show a "detecting" countdown) while it runs.
+  function detectInitialState() {
+    return new Promise((resolve) => {
+      const detectionStartedAt = Date.now();
+      let dbSum = 0;
+      let sampleCount = 0;
+      let lastRms = 0;
+
+      function tick() {
+        if (!analyser) return;
+        const { rms, db } = readDbSample();
+        dbSum += db;
+        sampleCount += 1;
+        lastRms = rms;
+        onLevel?.(Math.min(1, Math.max(0, (db + 60) / 60)));
+
+        const elapsed = Math.min((Date.now() - detectionStartedAt) / 1000, DETECTION_SECONDS);
+        onDetecting?.(elapsed, DETECTION_SECONDS);
+
+        if (elapsed < DETECTION_SECONDS) {
+          animationFrameId = requestAnimationFrame(tick);
+        } else {
+          animationFrameId = null;
+          resolve({
+            avgDb: sampleCount ? dbSum / sampleCount : calibration.normalBaselineDbRel,
+            dataQuality: computeDataQuality(lastRms),
+          });
+        }
+      }
+
+      tick();
+    });
+  }
+
   function runDecision(longTermDbRel, shortTermDbRel, transientScore, sustainedSeconds, dataQuality) {
     const decisionTime = Date.now();
     // Manual mode short-circuits decideContext before it ever updates the
@@ -199,12 +263,7 @@
   function measure() {
     if (!analyser || !audioContext) return;
 
-    const samples = new Float32Array(analyser.fftSize);
-    analyser.getFloatTimeDomainData(samples);
-    let sum = 0;
-    for (let index = 0; index < samples.length; index += 1) sum += samples[index] ** 2;
-    const rms = Math.sqrt(sum / samples.length);
-    const db = 20 * Math.log10(Math.max(rms, 0.00001));
+    const { rms, db } = readDbSample();
 
     smoothedLongTermDb = smoothedLongTermDb * 0.94 + db * 0.06;
     const spike = Math.max(0, db - smoothedLongTermDb);
@@ -236,22 +295,19 @@
     onLevel = options.onLevel;
     onDecision = options.onDecision;
     onTrackChange = options.onTrackChange;
+    onDetecting = options.onDetecting;
 
     const configuration = getConfiguration();
     activeProfile = configuration.profile;
     settingsSource = configuration.source;
     operationMode = configuration.operationMode;
     calibration = configuration.calibration;
-    currentState = "social";
-    latestDecisionEnergy = "medium";
-    candidateState = "social";
-    candidateStartedAt = Date.now();
     currentGainDb = calibration.preferredGainDb;
-    smoothedLongTermDb = calibration.normalBaselineDbRel;
     trackIndexes = { low: null, medium: null, high: null };
     trackSelector.reset();
 
     let initialIndex;
+    let initialDecision;
     try {
       microphoneStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
@@ -262,15 +318,49 @@
       microphoneSource = audioContext.createMediaStreamSource(microphoneStream);
       microphoneSource.connect(analyser);
 
+      // Measure the room for a few seconds before choosing the first track,
+      // instead of always assuming Social and waiting out the 10s
+      // STATE_CONFIRMING hysteresis in decideContext() to correct it.
+      const { avgDb, dataQuality } = await detectInitialState();
+      const initialState = classifyAmbient(avgDb, calibration);
+      initialDecision = decideContext({
+        shortTermDbRel: avgDb,
+        longTermDbRel: avgDb,
+        transientScore: 0,
+        dataQuality,
+        sustainedSeconds: 0,
+        currentState: initialState,
+        currentGainDb,
+        operationMode,
+        calibration,
+        candidateState: initialState,
+        candidateSeconds: 10,
+        canChangeTrack: false,
+        manualHold: false,
+      });
+
+      // LOW_DATA_QUALITY/transient holds return "uncertain"/"transient", which
+      // aren't valid resting states for the hysteresis in decideContext() —
+      // fall back to the same neutral default the old hardcoded value was.
+      const resolvedState = initialDecision.state === "uncertain" || initialDecision.state === "transient"
+        ? "social"
+        : initialDecision.state;
+      currentState = resolvedState;
+      candidateState = resolvedState;
+      candidateStartedAt = Date.now();
+      currentGainDb = initialDecision.targetGainDb;
+      smoothedLongTermDb = avgDb;
+      latestDecisionEnergy = initialDecision.energy;
+
       player ||= new SoundscapePlayer({
         onTrackEnded: handleTrackEnded,
         onTrackCycleComplete: handleTrackCycleComplete,
       });
       player.onTrackEnded = handleTrackEnded;
       player.onTrackCycleComplete = handleTrackCycleComplete;
-      initialIndex = trackSelector.next("medium", null);
-      trackIndexes.medium = initialIndex;
-      await player.play("medium", currentGainDb, initialIndex);
+      initialIndex = trackSelector.next(initialDecision.energy, null);
+      trackIndexes[initialDecision.energy] = initialIndex;
+      await player.play(initialDecision.energy, currentGainDb, initialIndex);
     } catch (error) {
       // A rejection here (autoplay policy, no mic hardware, ...) must not leave the
       // mic/AudioContext acquired above dangling — otherwise the browser mic
@@ -279,10 +369,15 @@
       await stop();
       throw error;
     }
-    onTrackChange?.(getSoundscapeMeta("medium", initialIndex), {
-      energy: "medium",
+    onTrackChange?.(getSoundscapeMeta(initialDecision.energy, initialIndex), {
+      energy: initialDecision.energy,
       trackIndex: initialIndex,
       reason: "start",
+    });
+    onDecision?.(initialDecision, {
+      longTermDbRel: smoothedLongTermDb,
+      shortTermDbRel: smoothedLongTermDb,
+      activeEnergy: player?.activeEnergy || null,
     });
 
     void window.VibeSpaceFreesound?.refreshAll?.().catch(() => undefined);
@@ -309,6 +404,7 @@
     onLevel = null;
     onDecision = null;
     onTrackChange = null;
+    onDetecting = null;
   }
 
   function setOperationMode(mode) {
@@ -449,6 +545,10 @@
     }
   }
 
+  function renderDetecting(elapsedSeconds, totalSeconds) {
+    status.textContent = `偵測環境音量中（${elapsedSeconds.toFixed(1)} / ${totalSeconds} 秒）`;
+  }
+
   function renderTrack(meta, context = {}) {
     if (meta && trackLabel) {
       // meta.subtitle is always "{Quiet/Social/Busy} · {genre}" (see
@@ -500,6 +600,7 @@
           onLevel: render,
           onDecision: renderDecision,
           onTrackChange: renderTrack,
+          onDetecting: renderDetecting,
         });
         setActiveMode(engineState.operationMode);
         status.textContent = "";
