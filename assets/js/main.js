@@ -356,14 +356,15 @@
   };
   const ENERGY_LABELS = { low: "Quiet", medium: "Social", high: "Busy" };
   const STATE_BY_ENERGY = { low: "quiet", medium: "social", high: "busy" };
-  // Comfort/Balanced/Flow only diverge from each other once the room is
-  // actually confirmed Busy (see context-engine.js) — in a quiet room they
-  // all behave identically, which is easy to mistake for "these buttons
-  // don't do anything." Spell out the intent so it's not invisible.
+  // Comfort/Balanced/Flow set slightly different target gain in every state
+  // (see context-engine.js), but outside Busy the gap is only ~1dB and the
+  // actual music/genre never changes — so in practice these buttons are hard
+  // to tell apart until the room is actually confirmed Busy. Spell out the
+  // intent so it's not invisible.
   const MODE_COPY = {
     comfort: "談話舒適優先：忙碌時只做最小音量補償，不追逐現場噪音。",
     balanced: "穩定與活力平衡：預設模式，依現場狀況適度調整音量與能量。",
-    flow: "尖峰流動優先：忙碌時較積極提高音量，並更快切換到有活力的曲目。",
+    flow: "尖峰流動優先：忙碌時更積極提高音量，並換成有活力的曲目。",
     manual: "手動控制：系統暫停自動判斷，改用「下一首」自行切換曲目類別。",
   };
 

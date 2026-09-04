@@ -55,6 +55,10 @@
   這項不在原始稽核清單裡，是使用者實際使用時截圖回報「常常會一閃一閃的很難看」才發現。原因：`TRANSIENT_IGNORED`/`LOW_DATA_QUALITY` 這兩種「應該完全被忽略」的 tick，`decision.energy` 會被強制設成 `"medium"`，導致 UI 把它映射回 `"social"`，讓狀態文字在那一幀短暫閃成「Social」再跳回「Quiet」——現場只要有一點雜音（腳步聲、關門聲）就會常態性觸發。
   → 修法：`renderDecision()` 在 `decision.state` 是 `"transient"`/`"uncertain"` 時直接跳過這次畫面更新，維持顯示上一個穩定狀態，音量指示條不受影響仍會照實反映音量。
 
+- [x] **`main.js` 裡另一處過時註解 + Flow caption 重複「反應更快」的沒有依據的說法**（本次已修復）— `main.js`（`MODE_COPY` 上方）
+  跟 `index.html:87`（PR #40 已修）是同一類問題，但這裡是另一個獨立出處：程式碼註解還寫著「Comfort/Balanced/Flow 只有在 Busy 時才不同，安靜房間三者完全一樣」，跟現況（Quiet/Social 音量其實也有 1dB 差距）不符；Flow 的即時 caption 文字（`#vibeModeCaption`，按下 Flow 按鈕時畫面上顯示的說明）也寫著「並更快切換到有活力的曲目」，但 Flow 跟 Balanced 用同一套 10 秒確認窗跟門檻值，沒有比較快，只有音量幅度比較大。
+  → 修法：把註解改成準確描述現況（音量在每個狀態都有差，但差距很小、Busy 才會真的換曲風），Flow caption 拿掉「更快切換」，只保留「更積極提高音量，並換成有活力的曲目」。
+
 ## 🟡 中風險
 
 > 2026-09-04 demo 前二次更新：以下 5 項是從「上台 demo 給觀眾看」角度重新篩選、優先處理的（明顯會在畫面上出錯、有雜音、或會把人踢出登入頁），其餘中風險項目維持不動、demo 後再排時間處理。
